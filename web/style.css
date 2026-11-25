@@ -1,8 +1,8 @@
 @font-face{font-family:"Pretendard Variable";font-weight:45 920;font-style:normal;font-display:swap;src:url("fonts/PretendardVariable.woff2") format("woff2-variations")}
 :root{
   --page:#f3f3f4;--surface:#ffffff;--surface2:#f4f4f5;--ink:#111111;--ink2:#55585e;--muted:#9a9da3;
-  --grid:#ececee;--axis:#d6d7da;--brand:#18307e;--brand-ink:#ffffff;--pink:#d6006f;
-  --s1:#18307e;--s2:#9a9da3;--s3:#9a9da3;--s4:#c4c6ca;
+  --grid:#ececee;--axis:#d6d7da;--brand:#16245e;--brand-ink:#ffffff;--pink:#d6006f;
+  --s1:#16245e;--s2:#9a9da3;--s3:#9a9da3;--s4:#c4c6ca;
   --good:#111111;--bad:#111111;--radius:18px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}

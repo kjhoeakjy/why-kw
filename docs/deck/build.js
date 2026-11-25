@@ -2,18 +2,18 @@ const pptxgen = require('pptxgenjs');
 const { applyTheme } = require('/root/.claude/skills/synced/63122878-a884-444f-aae4-af6d8490fa3c_b3988ff4-46c4-43e3-804b-a29f0de7ded6/pptx/scripts/apply_theme.js');
 const OUT = process.argv[2];
 const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malgun Gothic',
-  colors: { dk1: '0A0A0A', lt1: 'FFFFFF', dk2: '6B6B6B', lt2: 'F2F2F2', accent1: '18307E', accent2: 'D6006F', accent3: 'A6A6A6', accent4: 'D0D0D0', accent5: 'F2F2F2', accent6: '3A3A3A', hlink: '0A0A0A', folHlink: '6B6B6B' } };
+  colors: { dk1: '0A0A0A', lt1: 'FFFFFF', dk2: '6B6B6B', lt2: 'F2F2F2', accent1: '16245E', accent2: 'D6006F', accent3: 'A6A6A6', accent4: 'D0D0D0', accent5: 'F2F2F2', accent6: '3A3A3A', hlink: '0A0A0A', folHlink: '6B6B6B' } };
 (async () => {
   const pres = new pptxgen();
   pres.layout = 'LAYOUT_WIDE';
   pres.theme = { headFontFace: THEME.headFontFace, bodyFontFace: THEME.bodyFontFace };
   pres.title = 'Why Kiwoom? 나만의 AI를 키움'; pres.author = '김연주';
   const C = pres.SchemeColor, W = 13.333, M = 0.9;
-  pres.defineSlideMaster({ title: 'Dark', background: { color: '18307E' }, objects: [
+  pres.defineSlideMaster({ title: 'Dark', background: { color: '16245E' }, objects: [
     { placeholder: { options: { name: 'title', type: 'title', x: M, y: 3.0, w: W - 2 * M, h: 0.8, fontSize: 32, bold: true, color: C.background1, align: 'left', valign: 'top', margin: 0 }, text: '' } } ] });
   pres.defineSlideMaster({ title: 'Light', background: { color: 'FFFFFF' }, objects: [
     { placeholder: { options: { name: 'title', type: 'title', x: M, y: 0.8, w: W - 2 * M, h: 0.6, fontSize: 22, bold: true, color: C.text1, align: 'left', valign: 'top', margin: 0 }, text: '' } },
-    { line: { x: M, y: 1.5, w: W - 2 * M, h: 0, line: { color: '18307E', width: 1.5 } } },
+    { line: { x: M, y: 1.5, w: W - 2 * M, h: 0, line: { color: '16245E', width: 1.5 } } },
     { text: { text: '나만의 AI를 키움', options: { x: M, y: 6.85, w: 4, h: 0.3, fontSize: 9, color: C.text2, margin: 0 } } } ],
     slideNumber: { x: W - M - 0.6, y: 6.85, w: 0.6, h: 0.3, fontSize: 9, color: C.text2, align: 'right' } });
   const T = (s, text, o) => s.addText(text, { isTextBox: true, margin: 0, valign: 'top', color: C.text1, ...o });
@@ -158,7 +158,7 @@ const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malg
   const cx = 6.3, cw4 = W - M - cx;
   T(s, '설정 조합 640건의 연 수익률 분포(건)', { x: cx + 0.1, y: 1.9, w: 5, h: 0.25, fontSize: SM, color: C.text2 });
   s.addChart(pres.charts.BAR, [{ name: '건수', labels: ['-20% 미만', '-20~-10%', '-10~0%', '0~10%', '10~20%', '20% 이상'], values: [22, 96, 320, 167, 28, 7] }],
-    { x: cx, y: 2.15, w: cw4, h: 3.0, barDir: 'col', chartColors: ['18307E'], showLegend: false, showValue: true, dataLabelFormatCode: '0', dataLabelPosition: 'outEnd', dataLabelFontSize: 10, dataLabelFontFace: '+mn-lt', dataLabelColor: '0A0A0A',
+    { x: cx, y: 2.15, w: cw4, h: 3.0, barDir: 'col', chartColors: ['16245E'], showLegend: false, showValue: true, dataLabelFormatCode: '0', dataLabelPosition: 'outEnd', dataLabelFontSize: 10, dataLabelFontFace: '+mn-lt', dataLabelColor: '0A0A0A',
       catAxisLabelFontSize: 10, catAxisLabelFontFace: '+mn-lt', catAxisLabelColor: '0A0A0A', valAxisHidden: true, valGridLine: { style: 'none' }, catGridLine: { style: 'none' },
       barGapWidthPct: 50, altText: '설정 조합별 연 수익률 분포 막대 차트', objectName: '수익률 분포 차트' });
   [['최저', '-39.6%'], ['중앙값', '-2.9%'], ['최고', '+29.2%'], ['수익 구간', '201건(31%)']].forEach(([k, v], i) => {
