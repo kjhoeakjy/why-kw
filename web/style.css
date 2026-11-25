@@ -26,7 +26,7 @@ p{margin:6px 0}
 .muted{color:var(--muted);font-size:12px}
 h2+.sub{margin:0 4px 14px}
 .up{color:var(--good)}.down{color:var(--bad)}
-.up::before{content:"▲ ";font-size:.55em;vertical-align:middle}.down::before{content:"▼ ";font-size:.55em;vertical-align:middle}
+.imp{margin-top:7px;margin-bottom:7px}
 td.up::before,td.down::before,.kv .up::before,.kv .down::before,.trio .up::before,.trio .down::before{content:none}
 
 /* 카드 */
@@ -48,7 +48,7 @@ details{margin:8px 0}summary{cursor:pointer;font-weight:600;font-size:14px;paddi
 
 /* 배지 */
 .badge{display:inline-block;font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:6px;background:var(--surface2);color:var(--ink2);white-space:nowrap}
-.badge.live,.badge.m{background:var(--pink);color:#fff}
+.badge.live,.badge.m{background:var(--pink);color:#fff!important}
 .badge.pre,.badge.p{background:var(--surface2);color:var(--ink2)}
 
 /* 선택 칩 */
@@ -158,3 +158,4 @@ details.disc li{margin:4px 0}details.disc ul{padding-left:16px;margin:6px 0}
 .my .opt-table{display:none}
 .home header.top h1{color:var(--brand)}
 .home header.top h1::after{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--pink);margin-left:5px;vertical-align:middle}
+.opt-table td,.opt-table th{padding-left:4px;padding-right:4px;font-size:12.5px}
