@@ -376,11 +376,12 @@
       ${S.versions.length > 1 ? `<div class="card"><h3>버전 비교</h3>${compareChart(S.versions.map(v => ({ name: v.name, short: v.name, run: v.run })))}</div>` : ''}
       ${recipeCard(S.cur.s, `<input type="text" readonly value="${esc(url)}" id="share"><button class="btn small" data-act="copy">공유 링크 복사</button>`, '연구 설정 공유')}
       <div class="card"><h3>영웅문S# 연계 이용</h3>
-        <div class="kv"><span>앱 설치</span><span>AI 설정·실험 기록 이전</span></div>
-        <div class="kv"><span>회원가입</span><span>복수 기기 기록 조회</span></div>
+        <div class="kv"><span>앱 설치·회원가입</span><span>AI 설정·실험 기록 이전</span></div>
         <div class="kv"><span>계좌 개설·인증</span><span>보유 종목·현금 기준 재산정</span></div>
+        <div class="kv"><span>자동 주문</span><span>채택 가능 판정 AI, 한도 설정, 주문 전 승인</span></div>
+        <div class="kv"><span>운용 보고서</span><span>주간·월간 성과, 거래 내역, 개선 제안</span></div>
         <button class="btn small" disabled>영웅문S# 이동</button>
-        <p class="muted">시연 화면에서는 앱 연결·실계좌·주문 기능 미지원</p></div>`;
+        <p class="muted">계좌 연계 기능은 설계안이며 준법 검토 전제. 시연 화면은 앱 연결·실계좌·주문 미지원</p></div>`;
   }
   const recipeCard = (s, action, label) => `<div class="card sel"><p class="muted">${label}</p><h3 style="font-size:16px">${esc(aiTitle(s))}</h3>
       <div class="kv"><span>데이터</span><span>${s.groups.map(g => SHORT[g]).join(' · ')}</span></div>

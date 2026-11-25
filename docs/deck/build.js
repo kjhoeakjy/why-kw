@@ -41,22 +41,22 @@ const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malg
   // 2 대상 고객·서비스 구성
   s = pres.addSlide({ masterName: 'Light', sectionTitle: '제안' });
   s.addText('Mission 1. 대상 고객과 서비스 구성', { placeholder: 'title' });
-  T(s, '대상', { x: M, y: 1.9, w: 1, h: 0.3, fontSize: SM, color: C.text2 });
-  T(s, '투자 기준은 있으나 검증 수단이 없는 타사 국내주식 직접투자자', { x: M + 1.0, y: 1.87, w: 10, h: 0.3, fontSize: 15, bold: true });
+  T(s, '대상', { x: M, y: 1.78, w: 1, h: 0.3, fontSize: SM, color: C.text2 });
+  T(s, '투자 기준은 있으나 검증 수단이 없는 타사 국내주식 직접투자자', { x: M + 1.0, y: 1.75, w: 10, h: 0.3, fontSize: 15, bold: true });
   const fx = M, fw = 5.3, fh = 0.6;
-  [['01', '투자 기준 입력'], ['02', '개인 모델 학습'], ['03', '실제 데이터 검증'], ['04', '요청 기반 개선'], ['05', '보유 자산 연계']].forEach(([n, t], i) => {
+  [['01', '투자 기준 입력'], ['02', '개인 모델 학습'], ['03', '실제 데이터 검증'], ['04', '요청 기반 개선'], ['05', '계좌 연계 자동 주문 · 운용 보고서']].forEach(([n, t], i) => {
     const y = 2.55 + i * (fh + 0.12), dark = i === 1;
     box(s, fx, y, fw, fh, `단계 ${n}`, dark);
     T(s, n, { x: fx + 0.25, y: y + 0.19, w: 0.5, h: 0.25, fontSize: SM, color: dark ? C.accent4 : C.accent2 });
     T(s, t, { x: fx + 0.85, y: y + 0.15, w: fw - 1, h: 0.32, fontSize: 15, bold: true, color: dark ? C.background1 : C.text1 });
   });
-  const ph = 3.45, py = 2.65;
+  const ph = 3.35, py = 3.0;
   [[7.2, 's-my-home.png', 'MY AI', '일반 투자자 · 간편모드'], [10.1, 's-qs-create.png', 'QUANT STUDIO', '적극적 투자자 · 일반모드']].forEach(([x, img, t, d]) => {
     phone(s, img, x, py, ph, t + ' 화면');
     T(s, t, { x, y: py - 0.75, w: 2.6, h: 0.3, fontSize: 13, bold: true });
     T(s, d, { x, y: py - 0.42, w: 2.6, h: 0.25, fontSize: SM, color: C.text2 });
   });
-  s.addNotes('대상은 종목 선택 기준은 있으나 검증 수단이 없는 타사 직접투자자입니다. 숙련도에 따라 간편모드의 MY AI와 일반모드의 QUANT STUDIO로 구분합니다. 보유 자산 연계는 상용화 단계 범위이며 준법 검토가 필요합니다. 고객 유형은 가설이며 인터뷰 결과가 아닙니다.');
+  s.addNotes('대상은 종목 선택 기준은 있으나 검증 수단이 없는 타사 직접투자자입니다. 숙련도에 따라 간편모드의 MY AI와 일반모드의 QUANT STUDIO로 구분합니다. 계좌 연계 자동 주문과 운용 보고서는 키움 계좌 개설 고객에 한정한 상용화 단계 기능이며 준법 검토가 필요합니다. 고객 유형은 가설이며 인터뷰 결과가 아닙니다.');
 
   // 3 Why Kiwoom
   s = pres.addSlide({ masterName: 'Light', sectionTitle: '제안' });
@@ -90,16 +90,16 @@ const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malg
     T(s, v, { x: cx2, y, w: cw2, h: 0.26, fontSize: 12, bold: i === 4, color: i === 4 ? C.text1 : C.text2, align: 'right' });
   });
   rule(s, cx2, dy + 5 * 0.44, cw2, '유형 하단선');
-  const ey = dy + 2.85;
+  const ey = dy + 2.65;
   T(s, '도입 효과', { x: cx2, y: ey - 0.3, w: cw2, h: 0.25, fontSize: SM, color: C.accent2, bold: true });
-  [['유입', '계좌 개설 전 체험 경로'], ['잔류', '학습 모델·실험 기록 축적'], ['비용', '기존 기능 재구성'], ['연계', '키우Me·조건검색·API']].forEach(([k, v], i) => {
-    const y = ey + 0.1 + i * 0.44;
+  [['유입', '계좌 개설 전 체험 경로'], ['전환', '계좌 연계 기능 한정 제공'], ['잔류', '학습 모델·실험 기록 축적'], ['비용', '기존 기능 재구성'], ['연계', '키우Me·조건검색·API']].forEach(([k, v], i) => {
+    const y = ey + 0.1 + i * 0.36;
     rule(s, cx2, y - 0.1, cw2, `효과 구분선 ${i + 1}`, i ? 'D0D0D0' : 'D6006F');
     T(s, k, { x: cx2, y, w: 1.2, h: 0.26, fontSize: 12, bold: true });
     T(s, v, { x: cx2 + 1.0, y, w: cw2 - 1.0, h: 0.26, fontSize: 12, color: C.text2, align: 'right' });
   });
-  rule(s, cx2, ey + 4 * 0.44, cw2, '효과 하단선');
-  s.addNotes('키움증권은 조건검색, 성과검증, API로 개인 투자자의 전략 개발 환경을 제공해 왔습니다. 본 제안은 해당 기반에 개인 모델 학습·검증·개선 기능을 결합한 것이며 코딩 경험이 없는 고객도 대상에 포함합니다. 유형 비교는 일반 기능 기준이며 개별 경쟁사의 기능 범위와 상이할 수 있습니다. 도입 효과는 다음과 같습니다. 계좌 개설 전 체험이 타사 고객의 유입 경로가 됩니다. 학습 모델과 실험 기록이 키움에 축적되어 이탈 유인이 감소합니다. 기존 기능의 재구성이므로 신규 개발 범위가 제한적입니다. 키우Me, 조건검색, API 등 기존 서비스와 연계가 가능합니다. NH투자증권 젠포트 DIY 등 규칙 조합형 전략 제작 서비스는 기존에 존재하며 본 제안의 차이는 개인별 예측 모델 학습, 계좌 개설 전 체험, 요청 기반 개선 판정입니다. 효과의 크기는 측정 전이며 수치는 제시하지 않습니다.');
+  rule(s, cx2, ey + 5 * 0.36, cw2, '효과 하단선');
+  s.addNotes('키움증권은 조건검색, 성과검증, API로 개인 투자자의 전략 개발 환경을 제공해 왔습니다. 본 제안은 해당 기반에 개인 모델 학습·검증·개선 기능을 결합한 것이며 코딩 경험이 없는 고객도 대상에 포함합니다. 유형 비교는 일반 기능 기준이며 개별 경쟁사의 기능 범위와 상이할 수 있습니다. 도입 효과는 다음과 같습니다. 계좌 개설 전 체험이 타사 고객의 유입 경로가 됩니다. 자동 주문과 운용 보고서를 계좌 보유 고객에 한정하여 계좌 개설과 거래로 전환합니다. 학습 모델과 실험 기록이 키움에 축적되어 이탈 유인이 감소합니다. 기존 기능의 재구성이므로 신규 개발 범위가 제한적입니다. 키우Me, 조건검색, API 등 기존 서비스와 연계가 가능합니다. NH투자증권 젠포트 DIY 등 규칙 조합형 전략 제작 서비스는 기존에 존재하며 본 제안의 차이는 개인별 예측 모델 학습, 계좌 개설 전 체험, 요청 기반 개선 판정입니다. 효과의 크기는 측정 전이며 수치는 제시하지 않습니다.');
 
   // 4 PoC
   s = pres.addSlide({ masterName: 'Light', sectionTitle: '제안' });
@@ -127,7 +127,7 @@ const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malg
   // 5 Mission 2 + QR
   s = pres.addSlide({ masterName: 'Light', sectionTitle: '제안' });
   s.addText('Mission 2. 유입 경로와 시연', { placeholder: 'title' });
-  const js = ['링크 접속', '비회원 체험', '앱 설치', '회원가입', '계좌 개설', '지속 이용'];
+  const js = ['링크 접속', '비회원 체험', '앱 설치', '회원가입', '계좌 개설', '자동 주문 · 보고서'];
   const jx0 = M + 0.35, jx1 = W - M - 0.35, jy = 2.35, r = 0.22;
   s.addShape(pres.ShapeType.line, { x: jx0, y: jy, w: jx1 - jx0, h: 0, line: { color: C.text1, width: 1 }, objectName: '이용 단계 연결선' });
   js.forEach((t, i) => {
@@ -149,7 +149,7 @@ const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malg
   T(s, '시연 페이지', { x: qx, y: by, w: q, h: 0.25, fontSize: SM, color: C.text2 });
   s.addImage({ path: 'qr.png', x: qx, y: qy, w: q, h: q, altText: '시연 페이지 QR 코드', objectName: 'QR', hyperlink: { url: 'https://kjhoeakjy.github.io/why-kw/' } });
   T(s, 'kjhoeakjy.github.io/why-kw', { x: qx, y: qy + q + 0.05, w: q, h: 0.25, fontSize: 9, color: C.text2, align: 'center' });
-  s.addNotes('투자 콘텐츠 제작자와 기존 고객이 연구 설정을 공유하면 수신자는 계좌 개설 전 본인 조건으로 재학습합니다. 수익률, 종목, 개인 자산 정보는 공유 대상에서 제외합니다. 인증과 계좌 개설 절차는 유지하되 체험 이후 단계로 배치합니다. 측정 지표는 링크 접속률, 첫 학습 완료율, 앱 설치율, 계좌 개설 완료율, 30일 재방문율입니다. QR 시연은 사전 학습·검증 결과를 조회하는 방식이며 실제 서비스가 아닙니다.');
+  s.addNotes('투자 콘텐츠 제작자와 기존 고객이 연구 설정을 공유하면 수신자는 계좌 개설 전 본인 조건으로 재학습합니다. 수익률, 종목, 개인 자산 정보는 공유 대상에서 제외합니다. 인증과 계좌 개설 절차는 체험 이후 단계에 배치합니다. 체험 범위는 과거 데이터 검증으로 한정하며 자동 주문과 운용 보고서는 키움 계좌 개설 고객에 한정하여 제공합니다. 자동 주문은 채택 가능 판정 모델, 주문 한도, 주문 전 고객 승인을 조건으로 하며 투자일임 해당 여부에 대한 준법 검토가 필요합니다. 측정 지표는 링크 접속률, 첫 학습 완료율, 앱 설치율, 계좌 개설 완료율, 30일 재방문율입니다. QR 시연은 사전 학습·검증 결과를 조회하는 방식이며 실제 서비스가 아닙니다.');
 
   await pres.writeFile({ fileName: OUT });
   await applyTheme(OUT, THEME);
