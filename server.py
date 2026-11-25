@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from engine import agent, backtest, data, model
 from engine import research as R
 
-app = FastAPI(title="KIWOOM AI FACTORY PoC")
+app = FastAPI(title="나만의 AI를 키움")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 _lock = threading.Lock()   # 동시 학습 1건으로 제한
 

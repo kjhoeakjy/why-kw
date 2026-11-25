@@ -1,4 +1,4 @@
-/* KIWOOM AI FACTORY PoC — 모바일 웹.
+/* 나만의 AI를 키움 시연 — 모바일 웹.
    화면의 모든 수치는 Python 엔진이 실제 과거 데이터로 계산한 결과(JSON)를 그대로 표시한다.
    LIVE 모드: 요청 시 서버에서 실시간 학습·검증. STATIC 모드: 같은 엔진으로 미리 실행해 둔 결과를 불러온다. */
 (() => {
@@ -129,7 +129,7 @@
   const chartLeave = el => { $('.cross', el).style.display = 'none'; $('.tip', el).style.display = 'none'; };
 
   /* ---------- 화면 조각 ---------- */
-  const header = () => `<header class="top"><h1>${S.mode === 'qs' ? 'QUANT STUDIO' : S.mode === 'my' ? 'MY AI' : 'KIWOOM AI FACTORY'}</h1>
+  const header = () => `<header class="top"><h1>${S.mode === 'qs' ? 'QUANT STUDIO' : S.mode === 'my' ? 'MY AI' : '나만의 AI를 키움'}</h1>
     <span class="badge ${LIVE ? 'live' : 'pre'}">${LIVE ? '실시간 학습' : '사전 계산'}</span>
     ${S.mode ? '<button data-act="home">처음</button>' : ''}</header>`;
   const tabs = () => !S.mode ? '' : `<nav class="tabs"><div>${[['create', S.mode === 'qs' ? '연구' : '설정'], ['validate', '검증'], ['optimize', S.mode === 'qs' ? '최적화' : '개선'], ['versions', '버전']]
@@ -140,7 +140,7 @@
   function landing() {
     const f = S.forked;
     return `${header()}
-      <h2 style="margin-top:40px">내 기준으로 학습하는 투자 AI</h2>
+      <h2 style="margin-top:40px">개인 투자 기준 학습 AI</h2>
       <p class="sub" style="margin-bottom:28px">계좌 없이 이용 가능하며 국내주식 실제 시세로 학습하고 가상 투자금으로 검증합니다.</p>
       ${f ? `<div class="card sel"><h3>공유받은 연구 설정</h3><p class="sub">${describe(f.spec).map(esc).join(' · ')}</p>
         <button class="btn small" data-act="fork">내 기준으로 재설정</button><p class="muted">공유 대상은 연구 설정이며 수익률·종목은 포함하지 않음</p></div>` : ''}

@@ -1,4 +1,4 @@
-# KIWOOM AI FACTORY — PoC
+# 나만의 AI를 키움 시연
 
 2026 신입사원 Challenge Mission "Why Kiwoom?" 제안의 실행형 PoC입니다.
 기획서: [docs/KIWOOM_AI_FACTORY_기획서_v6.md](docs/KIWOOM_AI_FACTORY_기획서_v6.md) · 실제 실행 결과: [docs/results.md](docs/results.md)
