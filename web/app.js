@@ -370,7 +370,10 @@
       : `<h2>${esc(aiTitle(r.s))} ${ver ? ver.name : ''}</h2>
       <p class="sub">${r.s.groups.map(g => SHORT[g]).join('·')} 정보 · ${horizonLabel(r.s.h)} · ${r.s.buf > 1 ? '낮은 거래 빈도' : '정기 교체'}${r.s.mf ? ' · 하락장 신규 매수 중단' : ''}${(r.s.x || []).length + (r.s.rules || []).length ? ` · 설계안 항목 ${(r.s.x || []).length + (r.s.rules || []).length}개 기록(계산 미반영)` : ''}</p>`;
     const verdictNote = bv ? `<p class="sub">${d.cagr >= 0 ? '원금 대비 수익 발생' : bv.cagr < d.cagr ? '기존 모델 대비 손실 폭 감소, 원금 손실 발생' : '원금 손실 발생'}</p>` : `<p class="sub">${d.cagr >= 0 ? '원금 대비 수익 발생' : '원금 손실 발생'}</p>`;
-    const idxNote = `<p class="sub idx">${d.cagr > mkc ? '동일 기간 지수 상회' : '동일 기간 지수 미달'}(코스피 대용 연 ${pct(mkc)})</p>`;
+    const fit = d.cagr > mkc && d.cagr > 0, gap = (d.cagr - mkc) * 100;
+    const idxNote = `<div class="fit ${fit ? 'ok' : 'no'}"><b>${fit ? '모의 운용 대상' : '실전 운용 부적합'}</b>
+      <span>${d.cagr <= 0 ? '비용 반영 시 원금 손실' : fit ? '비용 반영 수익, 지수 상회' : '지수 미달'} · 코스피 대용 대비 ${gap > 0 ? '+' : ''}${gap.toFixed(1)}%p</span>
+      <span class="muted">${fit ? '실주문 연계 전 모의 운용 기간 필요. 과거 성과의 이후 지속 미보장' : '해당 설정은 주문 연계 미지원. AI 개선에서 후보 비교 가능'}</span></div>`;
     const ck = staticKey(r.s), cr = COST && ck ? COST[`${ck.m}__${ck.p}`] : null;
     const costCard = cr ? `<div class="card"><h3>거래 비용 가정별 결과</h3><p class="sub">동일 예측 모델, 비용 가정 변경 시 ${Y0}~${Y1}년 성과</p>
         <div class="scroll"><table><tr><th>비용 가정</th><th>연 수익률</th><th>최대 낙폭</th></tr>
@@ -501,6 +504,7 @@
       <div class="card"><h3>영웅문S# 연계 이용</h3>
         <div class="kv"><span>앱 설치·회원가입</span><span>AI 설정·실험 기록 이전</span></div>
         <div class="kv"><span>계좌 개설·인증</span><span>보유 종목·현금 기준 재산정</span></div>
+        <div class="kv"><span>운용 적합 판정</span><span>지수 미달·원금 손실 설정 주문 연계 미지원</span></div>
         <div class="kv"><span>모의 운용</span><span>실주문 전 일정 기간 모의 운용</span></div>
         <div class="kv"><span>자동 주문</span><span>고객 작성 조건 기반, 한도 설정, 주문 전 승인</span></div>
         <div class="kv"><span>쏠림 한도</span><span>종목별 주문 집중 제한</span></div>
