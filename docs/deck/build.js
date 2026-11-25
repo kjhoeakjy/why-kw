@@ -34,15 +34,15 @@ const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malg
   T(s, '2026 신입사원 Challenge Mission  |  Why Kiwoom?', { x: M, y: 0.9, w: 9, h: 0.3, fontSize: SM, color: C.accent4 });
   s.addShape(pres.ShapeType.rect, { x: M, y: 2.62, w: 0.55, h: 0.07, fill: { color: C.accent2 }, line: { color: C.accent2, width: 0 }, objectName: '강조 막대' });
   s.addText('나만의 AI를 키움', { placeholder: 'title' });
-  T(s, '개인 투자 기준 학습 AI 서비스 제안', { x: M, y: 3.8, w: 9, h: 0.4, fontSize: BD, color: C.accent4 });
+  T(s, '투자 기준 사전 검증 · 개인 AI 학습 서비스 제안', { x: M, y: 3.8, w: 9, h: 0.4, fontSize: BD, color: C.accent4 });
   T(s, '키움증권 신입사원 22기 김연주', { x: M, y: 6.3, w: 6, h: 0.3, fontSize: SM, color: C.accent4 });
-  s.addNotes('개인의 투자 기준으로 투자 AI를 학습·검증·개선하는 서비스 제안입니다.');
+  s.addNotes('개인의 투자 기준으로 투자 AI를 학습하고 주문 전에 실제 데이터로 검증하는 서비스 제안입니다.');
 
   // 배경
   s = pres.addSlide({ masterName: 'Light', sectionTitle: '제안' });
   s.addText('제안 배경', { placeholder: 'title' });
   const gw = (W - 2 * M - 0.6) / 3;
-  [['경험', '개인 투자 AI 직접 학습', '자동 매수 · 매도 운용'], ['전망', '개인 전용 투자 AI 수요 증가', 'AI 발전에 따른 확대 예상'], ['제안', '누구나 본인의 투자 AI 학습', '나만의 AI를 키움']].forEach(([k, t, d], i) => {
+  [['경험', '개인 투자 AI 직접 학습', '자동 매수 · 매도 운용'], ['전망', '개인 전용 투자 AI 수요 증가', 'AI 발전에 따른 확대 예상'], ['제안', '누구나 본인의 투자 AI 학습 · 검증', '나만의 AI를 키움']].forEach(([k, t, d], i) => {
     const x = M + i * (gw + 0.3), dark = i === 2;
     box(s, x, 2.0, gw, 1.9, `배경 ${i + 1}`, dark);
     T(s, k, { x: x + 0.3, y: 2.25, w: gw - 0.6, h: 0.26, fontSize: SM, bold: true, color: dark ? C.accent4 : C.accent2 });
@@ -62,21 +62,21 @@ const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malg
   // 2 서비스 설명
   s = pres.addSlide({ masterName: 'Light', sectionTitle: '제안' });
   s.addText('타 증권사 고객이 키움을 선택할 새로운 이유', { placeholder: 'title' });
-  T(s, '고객이 선택한 투자 기준으로 개인 전용 AI를 학습하고 실제 데이터로 검증·개선하는 서비스', { x: M, y: 1.72, w: W - 2 * M, h: 0.32, fontSize: 15, bold: true });
-  T(s, '대상: 투자 기준은 있으나 검증 수단이 없는 타사 일반 투자자', { x: M, y: 2.1, w: W - 2 * M, h: 0.26, fontSize: SM, color: C.text2 });
+  T(s, '개인의 투자 기준으로 AI를 학습하고 주문 전에 실제 데이터로 검증하는 서비스', { x: M, y: 1.72, w: W - 2 * M, h: 0.32, fontSize: 15, bold: true });
+  T(s, '대상: 타사 앱 이용자 중 자동매매에 관심이 있으나 코딩 경험과 검증 수단이 없는 직장인 투자자(가설)', { x: M, y: 2.1, w: W - 2 * M, h: 0.26, fontSize: SM, color: C.text2 });
   const cw = (W - 2 * M) / 4, fph = 3.4, fpw = fph / 2;
-  [['01', '투자 기준 선택', '일반 · 고급 설정 중 선택', 'f1-set.png'], ['02', '개인 AI 학습 · 검증', '실제 과거 시세 · 거래 비용 반영', 'f2-home.png'], ['03', '요청 기반 개선', '후보 비교 · 채택 판정', 'f3-opt.png'], ['04', '키움증권 계좌 연계', '자동 주문 · 운용 보고서(설계안)', 'f4-link.png']].forEach(([n, t, d, img], i) => {
+  [['01', '투자 기준 선택', '일반 · 고급 설정 중 선택', 'f1-set.png'], ['02', '개인 AI 학습 · 검증', '거래 비용 반영 · 지수 대비 판정', 'f2-home.png'], ['03', '요청 기반 개선', '후보 비교 · 채택 판정', 'f3-opt.png'], ['04', '키움증권 계좌 연계', '자동 주문 · 운용 보고서(설계안)', 'f4-link.png']].forEach(([n, t, d, img], i) => {
     const x = M + i * cw;
     T(s, n, { x, y: 2.62, w: 0.4, h: 0.26, fontSize: SM, color: C.accent2, bold: true });
     T(s, t, { x: x + 0.4, y: 2.58, w: cw - 0.5, h: 0.3, fontSize: 14, bold: true });
     T(s, d, { x: x + 0.4, y: 2.9, w: cw - 0.5, h: 0.24, fontSize: 10, color: C.text2 });
     phone(s, img, x + 0.4, 3.28, fph, t + ' 화면');
   });
-  s.addNotes('본 제안은 고객이 선택한 투자 기준으로 개인 전용 AI를 학습하는 서비스입니다. 고객은 중시하는 정보와 보유 기간을 선택하며 고급 설정에서는 운용 방식, 회피 조건, 우선 목표를 추가로 지정합니다. 서비스는 해당 기준으로 예측 모델을 학습하고 실제 과거 시세에 거래 비용을 반영하여 검증합니다. 고객이 손실 축소 등 개선 방향을 요청하면 후보를 비교하고 채택 여부를 판정합니다. 키움증권 계좌 개설 고객에게는 자동 주문과 운용 보고서를 제공하며 해당 기능은 준법 검토가 필요한 설계안입니다. 대상 고객은 가설이며 인터뷰 결과가 아닙니다.');
+  s.addNotes('본 제안은 고객이 선택한 투자 기준으로 개인 전용 AI를 학습하고 주문 전에 검증하는 서비스입니다. 서비스의 역할은 수익 보장이 아닌 사전 검증입니다. PoC에서 설정 조합의 86%가 동일 기간 지수에 미달하였으며 해당 사실을 주문 전에 확인하도록 하는 것이 고객 보호 수단입니다. 고객은 중시하는 정보와 보유 기간을 선택하며 고급 설정에서는 운용 방식, 회피 조건, 우선 목표를 추가로 지정합니다. 서비스는 해당 기준으로 예측 모델을 학습하고 실제 과거 시세에 거래 비용을 반영하여 검증합니다. 고객이 손실 축소 등 개선 방향을 요청하면 후보를 비교하고 채택 여부를 판정합니다. 키움증권 계좌 개설 고객에게는 자동 주문과 운용 보고서를 제공하며 해당 기능은 준법 검토가 필요한 설계안입니다. 대상 고객은 가설이며 인터뷰 결과가 아닙니다.');
 
   // 3 Why Kiwoom
   s = pres.addSlide({ masterName: 'Light', sectionTitle: '제안' });
-  s.addText('키움 기존 자산 기반 구성과 도입 효과', { placeholder: 'title' });
+  s.addText('키움증권 기존 자산 기반 구성과 위험 통제', { placeholder: 'title' });
   const dw = 7.2, bw = (dw - 0.4) / 3, dy = 2.1;
   T(s, '키움증권 기존 자산', { x: M, y: dy - 0.3, w: 4, h: 0.25, fontSize: SM, color: C.text2 });
   [['조건검색', '투자 기준 설정'], ['성과검증', '과거 전략 검증'], ['Open API+ · REST API', '투자 시스템 구현']].forEach(([k, v], i) => {
@@ -91,19 +91,27 @@ const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malg
   T(s, '개인 모델 학습 · 검증 · 개선', { x: M, y: dy + 2.02, w: dw, h: 0.25, fontSize: SM, color: C.accent4, align: 'center' });
   s.addShape(pres.ShapeType.line, { x: M + dw / 2, y: dy + 2.5, w: 0, h: 0.35, line: { color: C.text1, width: 1 }, objectName: '하위 연결선' });
   box(s, M, dy + 2.85, dw, 0.9, '이용 대상');
-  T(s, '일반 투자자', { x: M, y: dy + 3.03, w: dw, h: 0.3, fontSize: 13, bold: true, align: 'center' });
+  T(s, '자동매매 관심 직장인 투자자', { x: M, y: dy + 3.03, w: dw, h: 0.3, fontSize: 13, bold: true, align: 'center' });
   T(s, '코딩 · API 없이 항목 선택으로 이용, 일반 · 고급 설정 제공', { x: M, y: dy + 3.35, w: dw, h: 0.25, fontSize: SM, color: C.text2, align: 'center' });
   const cx2 = 9.0, cw2 = W - M - cx2;
   const ey = dy;
   T(s, '도입 효과', { x: cx2, y: ey - 0.3, w: cw2, h: 0.25, fontSize: SM, color: C.accent2, bold: true });
-  [['유입', '계좌 개설 전 체험 경로'], ['전환', '계좌 연계 기능 한정 제공'], ['잔류', '학습 모델·실험 기록 축적'], ['비용', '기존 기능 재구성'], ['연계', '키우Me·조건검색·API']].forEach(([k, v], i) => {
-    const y = ey + 0.12 + i * 0.72;
-    rule(s, cx2, y - 0.12, cw2, `효과 구분선 ${i + 1}`, i ? 'D0D0D0' : 'D6006F');
-    T(s, k, { x: cx2, y: y + 0.08, w: 1.2, h: 0.28, fontSize: 13, bold: true });
-    T(s, v, { x: cx2 + 1.0, y: y + 0.08, w: cw2 - 1.0, h: 0.28, fontSize: 12, color: C.text2, align: 'right' });
+  [['유입', '계좌 개설 전 체험 경로'], ['전환', '계좌 연계 기능 한정 제공'], ['잔류', '학습 모델 · 실험 기록 축적']].forEach(([k, v], i) => {
+    const y = ey + 0.1 + i * 0.5;
+    rule(s, cx2, y - 0.1, cw2, `효과 구분선 ${i + 1}`, i ? 'D0D0D0' : 'D6006F');
+    T(s, k, { x: cx2, y: y + 0.04, w: 1.0, h: 0.26, fontSize: 12, bold: true });
+    T(s, v, { x: cx2 + 1.0, y: y + 0.04, w: cw2 - 1.0, h: 0.26, fontSize: SM, color: C.text2, align: 'right' });
   });
-  rule(s, cx2, ey + 5 * 0.72, cw2, '효과 하단선');
-  s.addNotes('키움증권은 조건검색, 성과검증, API로 개인 투자자의 전략 개발 환경을 제공해 왔습니다. 본 제안은 해당 기반에 개인 모델 학습·검증·개선 기능을 결합한 것이며 코딩 경험이 없는 고객도 대상에 포함합니다. 도입 효과는 다음과 같습니다. 계좌 개설 전 체험이 타사 고객의 유입 경로가 됩니다. 자동 주문과 운용 보고서를 계좌 보유 고객에 한정하여 계좌 개설과 거래로 전환합니다. 학습 모델과 실험 기록이 키움에 축적되어 이탈 유인이 감소합니다. 기존 기능의 재구성이므로 신규 개발 범위가 제한적입니다. 키우Me, 조건검색, API 등 기존 서비스와 연계가 가능합니다. NH투자증권 젠포트 DIY 등 규칙 조합형 전략 제작 서비스는 기존에 존재하며 본 제안의 차이는 개인별 예측 모델 학습, 계좌 개설 전 체험, 요청 기반 개선 판정입니다. 효과의 크기는 측정 전이며 수치는 제시하지 않습니다.');
+  const ry = ey + 1.95;
+  T(s, '위험 통제(설계안)', { x: cx2, y: ry - 0.3, w: cw2, h: 0.25, fontSize: SM, color: C.accent2, bold: true });
+  [['과신', '지수 대비 성과 상시 표시'], ['쏠림', '종목별 주문 쏠림 한도'], ['복제', '공유 설정 본인 조건 재학습'], ['실주문', '모의 운용 기간 경과 후 허용'], ['제도', '고객 작성 조건 주문 · 사전 승인']].forEach(([k, v], i) => {
+    const y = ry + 0.1 + i * 0.5;
+    rule(s, cx2, y - 0.1, cw2, `통제 구분선 ${i + 1}`, i ? 'D0D0D0' : '0A0A0A');
+    T(s, k, { x: cx2, y: y + 0.04, w: 1.0, h: 0.26, fontSize: 12, bold: true });
+    T(s, v, { x: cx2 + 1.0, y: y + 0.04, w: cw2 - 1.0, h: 0.26, fontSize: SM, color: C.text2, align: 'right' });
+  });
+  rule(s, cx2, ry + 5 * 0.5, cw2, '통제 하단선');
+  s.addNotes('키움증권은 조건검색, 성과검증, API로 개인 투자자의 전략 개발 환경을 제공해 왔습니다. 본 제안은 해당 기반에 개인 모델 학습·검증·개선 기능을 결합한 것이며 코딩 경험이 없는 고객도 대상에 포함합니다. 도입 효과는 다음과 같습니다. 계좌 개설 전 체험이 타사 고객의 유입 경로가 됩니다. 자동 주문과 운용 보고서를 계좌 보유 고객에 한정하여 계좌 개설과 거래로 전환합니다. 학습 모델과 실험 기록이 키움에 축적되어 이탈 유인이 감소합니다. 기존 기능의 재구성이므로 신규 개발 범위가 제한적입니다. 키우Me, 조건검색, API 등 기존 서비스와 연계가 가능합니다. NH투자증권 젠포트 DIY 등 규칙 조합형 전략 제작 서비스는 기존에 존재하며 본 제안의 차이는 개인별 예측 모델 학습, 계좌 개설 전 체험, 요청 기반 개선 판정입니다. 효과의 크기는 측정 전이며 수치는 제시하지 않습니다. 위험 통제는 PoC 실측에 근거한 설계안입니다. 과거 성과가 좋은 설정으로 이용자가 집중되는 것을 주요 위험으로 판단하였습니다. 이에 지수 대비 성과를 상시 표시하고 종목별 주문 쏠림 한도를 두며 공유받은 설정은 본인 조건으로 재학습하도록 합니다. 실주문은 모의 운용 기간 경과 후 허용합니다. 주문 방식은 기존 조건검색 자동매매와 동일하게 고객이 작성한 조건에 따른 주문으로 설계하며 투자일임 해당 여부는 준법 검토가 필요합니다.');
 
   // 5 Mission 2 + QR
   s = pres.addSlide({ masterName: 'Light', sectionTitle: '제안' });
@@ -138,32 +146,34 @@ const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malg
 
   // 4 PoC
   s = pres.addSlide({ masterName: 'Light', sectionTitle: '제안' });
-  s.addText('시연과 PoC 결과', { placeholder: 'title' });
+  s.addText('시연과 검증 결과', { placeholder: 'title' });
   const q = 2.2, qy = 2.25;
   T(s, '시연 페이지', { x: M, y: 1.9, w: q, h: 0.25, fontSize: SM, color: C.text2 });
   s.addImage({ path: 'qr.png', x: M, y: qy, w: q, h: q, altText: '시연 페이지 QR 코드', objectName: 'QR', hyperlink: { url: 'https://kjhoeakjy.github.io/why-kw/' } });
   T(s, 'kjhoeakjy.github.io/why-kw', { x: M, y: qy + q + 0.08, w: q, h: 0.25, fontSize: 9, color: C.text2, align: 'center' });
-  T(s, '사전 계산 결과 조회 방식', { x: M, y: qy + q + 0.36, w: q, h: 0.25, fontSize: 9, color: C.text2, align: 'center' });
-  const sx = 3.75;
-  T(s, 'PoC 규모', { x: sx, y: 1.9, w: 2, h: 0.25, fontSize: SM, color: C.text2 });
-  [['629만 행', '국내주식 일별 시세'], ['32개', '학습 모델'], ['1,024건', '설정 조합별 검증']].forEach(([n, l], i) => {
-    const y = 2.25 + i * 1.05;
-    T(s, n, { x: sx, y, w: 2.2, h: 0.45, fontSize: 22, bold: true, color: C.accent1 });
-    T(s, l, { x: sx, y: y + 0.48, w: 2.2, h: 0.25, fontSize: SM, color: C.text2 });
+  const sx = 3.75, sw = 5.0;
+  T(s, '성향이 상이한 설정 3건의 검증 결과', { x: sx, y: 1.9, w: sw, h: 0.25, fontSize: SM, color: C.text2 });
+  const col = [0, 2.3, 3.2, 4.1], hd = ['설정', '연 거래', '최대 낙폭', '연 수익률'];
+  hd.forEach((h, j) => T(s, h, { x: sx + col[j], y: 2.3, w: j ? 0.9 : 2.2, h: 0.22, fontSize: 10, color: C.text2, align: j ? 'right' : 'left' }));
+  [['단기 · 거래량 중시 · 5종목', '가격 · 거래량, 약 1주', '338회', '-53.9%', '-10.6%'], ['중기 · 위험 회피 · 10종목', '가격 · 위험 · 규모, 회피 조건 2종', '66회', '-38.8%', '-7.0%'], ['중기 · 보유 유지 · 5종목', '가격, 약 1개월', '65회', '-49.1%', '-7.6%']].forEach(([n, d, a1, a2, a3], i) => {
+    const y = 2.72 + i * 0.82;
+    rule(s, sx, y - 0.12, sw, `사례 구분선 ${i + 1}`, i ? 'D0D0D0' : '0A0A0A');
+    T(s, n, { x: sx, y, w: 2.3, h: 0.26, fontSize: 12, bold: true });
+    T(s, d, { x: sx, y: y + 0.3, w: 2.6, h: 0.22, fontSize: 9, color: C.text2 });
+    [a1, a2, a3].forEach((v, j) => T(s, v, { x: sx + col[j + 1], y: y + 0.08, w: 0.9, h: 0.28, fontSize: 13, bold: j === 2, align: 'right' }));
   });
-  const cx = 6.3, cw4 = W - M - cx;
-  T(s, '설정 조합 1,024건의 연 수익률 분포(건)', { x: cx + 0.1, y: 1.9, w: 5, h: 0.25, fontSize: SM, color: C.text2 });
-  s.addChart(pres.charts.BAR, [{ name: '건수', labels: ['-20% 미만', '-20~-10%', '-10~0%', '0~10%', '10~20%', '20% 이상'], values: [29, 169, 515, 244, 49, 18] }],
-    { x: cx, y: 2.15, w: cw4, h: 3.0, barDir: 'col', chartColors: ['16245E'], showLegend: false, showValue: true, dataLabelFormatCode: '0', dataLabelPosition: 'outEnd', dataLabelFontSize: 10, dataLabelFontFace: '+mn-lt', dataLabelColor: '0A0A0A',
-      catAxisLabelFontSize: 10, catAxisLabelFontFace: '+mn-lt', catAxisLabelColor: '0A0A0A', valAxisHidden: true, valGridLine: { style: 'none' }, catGridLine: { style: 'none' },
-      barGapWidthPct: 50, altText: '설정 조합별 연 수익률 분포 막대 차트', objectName: '수익률 분포 차트' });
-  [['최저', '-39.6%'], ['중앙값', '-2.8%'], ['최고', '+31.8%'], ['수익 구간', '310건(30%)']].forEach(([k, v], i) => {
-    const x = cx + 0.1 + i * 1.5;
-    T(s, k, { x, y: 5.3, w: 1.4, h: 0.22, fontSize: 10, color: C.text2 });
-    T(s, v, { x, y: 5.55, w: 1.4, h: 0.3, fontSize: 13, bold: true });
+  rule(s, sx, 2.72 + 3 * 0.82 - 0.12, sw, '사례 하단선');
+  T(s, '3건 간 주간 수익률 상관 0.30~0.54  |  코스피 대용 지수 연 +2.9%', { x: sx, y: 5.2, w: sw, h: 0.24, fontSize: 10, color: C.accent1 });
+  const cx = 9.35, cw4 = W - M - cx;
+  T(s, '설정 512건 실측(100만 원 기준)', { x: cx, y: 1.9, w: cw4, h: 0.25, fontSize: SM, color: C.text2 });
+  [['79%', '보유 종목 무중복 설정 쌍 비율'], ['0.38', '주간 수익률 상관계수 평균'], ['26%', '최다 중복 종목 보유 비율'], ['14%', '지수 상회 설정 비율'], ['0.15', '검증 · 이후 구간 순위 상관']].forEach(([n, l], i) => {
+    const y = 2.3 + i * 0.66;
+    rule(s, cx, y - 0.08, cw4, `실측 구분선 ${i + 1}`, i === 3 ? 'D6006F' : i ? 'D0D0D0' : '0A0A0A');
+    T(s, n, { x: cx, y: y + 0.06, w: 0.9, h: 0.34, fontSize: 16, bold: true, color: i > 2 ? C.accent2 : C.accent1 });
+    T(s, l, { x: cx + 0.9, y: y + 0.12, w: cw4 - 0.9, h: 0.26, fontSize: 10, color: C.text2, align: 'right' });
   });
-  T(s, '검증 구간 2019~2024, 거래 비용 반영 실측  |  성과 악화 후보는 채택 보류 판정  |  출처: KRX 일별 시세(FinanceData/marcap)', { x: M, y: 6.4, w: W - 2 * M, h: 0.3, fontSize: 9, color: C.text2 });
-  s.addNotes('QR 시연은 사전 학습·검증 결과를 조회하는 방식이며 실제 서비스가 아닙니다. PoC의 목적은 구현 가능성 확인입니다. 실제 시세 629만 행으로 모델 32개를 학습하고 설정 조합 1,024건을 검증하였습니다. 조합별 연 수익률은 최저 -39.6%, 최고 +31.8%, 중앙값 -2.8%이며 수익 구간은 310건입니다. 고객의 선택이 결과에 반영된다는 근거입니다. 성과가 악화된 개선 후보는 채택 보류로 판정하며 손실 수치는 조정하지 않았습니다. 동일 기간 코스피 대용 지수(시가총액 가중 산출)는 연 +2.9%입니다.');
+  T(s, '검증 구간 2019~2024, 거래 비용 반영 실측  |  QR 시연은 사전 계산 결과 조회 방식  |  출처: KRX 일별 시세(FinanceData/marcap)', { x: M, y: 6.4, w: W - 2 * M, h: 0.3, fontSize: 9, color: C.text2 });
+  s.addNotes('QR 시연은 사전 학습·검증 결과를 조회하는 방식이며 실제 서비스가 아닙니다. 성향이 상이한 설정 3건은 거래 횟수, 최대 낙폭, 보유 종목이 서로 달랐으며 3건 간 주간 수익률 상관계수는 0.30~0.54입니다. 3건 모두 동일 기간 지수에 미달하였습니다. 투자금 100만 원 기준 설정 512건을 비교한 결과 임의의 설정 2건 간 보유 종목이 겹치지 않는 비율은 79%이며 주간 수익률 상관계수 평균은 0.38입니다. 개인별 설정이 상이한 결과로 이어진다는 근거입니다. 한계도 확인하였습니다. 설정의 26%가 동일 종목 1개를 동시에 보유하였습니다. 동일 기간 지수를 상회한 설정은 14%입니다. 검증 구간의 성과 순위와 이후 구간의 성과 순위 간 상관은 0.15로 과거 성과가 이후 성과로 이어진다고 보기 어렵습니다. 따라서 본 서비스의 역할을 수익 제공이 아닌 주문 전 검증으로 정의하였으며 앞 장의 위험 통제를 설계에 포함하였습니다. 손실 수치는 조정하지 않았습니다.');
 
   await pres.writeFile({ fileName: OUT });
   await applyTheme(OUT, THEME);

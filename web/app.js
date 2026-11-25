@@ -156,12 +156,12 @@
   function landing() {
     const f = S.forked;
     return `${header()}<div class="land">
-      <div class="intro"><h2>개인 투자 기준 학습 AI</h2>
-        <p class="sub">계좌 개설 전 체험 가능</p></div>
+      <div class="intro"><h2>투자 기준 학습·검증 AI</h2>
+        <p class="sub">주문 전 실제 데이터 검증, 계좌 개설 전 체험 가능</p></div>
       ${f ? recipeCard(f.spec, '<button class="btn small" data-act="fork">설정 복제 후 수정</button>', '공유받은 설정') : ''}
       <div class="card steps"><h3>이용 순서</h3>
         <div class="kv"><span>01 투자 기준 선택</span><span>중시 정보, 보유 기간, 운용 방식</span></div>
-        <div class="kv"><span>02 AI 학습·검증</span><span>실제 과거 시세, 거래 비용 반영</span></div>
+        <div class="kv"><span>02 AI 학습·검증</span><span>거래 비용 반영, 지수 대비 판정</span></div>
         <div class="kv"><span>03 AI 개선</span><span>후보 비교, 채택 판정</span></div>
         </div>
       <div class="card start"><button class="btn" data-act="acct">키움증권 계좌로 시작</button>
@@ -370,6 +370,7 @@
       : `<h2>${esc(aiTitle(r.s))} ${ver ? ver.name : ''}</h2>
       <p class="sub">${r.s.groups.map(g => SHORT[g]).join('·')} 정보 · ${horizonLabel(r.s.h)} · ${r.s.buf > 1 ? '낮은 거래 빈도' : '정기 교체'}${r.s.mf ? ' · 하락장 신규 매수 중단' : ''}${(r.s.x || []).length + (r.s.rules || []).length ? ` · 설계안 항목 ${(r.s.x || []).length + (r.s.rules || []).length}개 기록(계산 미반영)` : ''}</p>`;
     const verdictNote = bv ? `<p class="sub">${d.cagr >= 0 ? '원금 대비 수익 발생' : bv.cagr < d.cagr ? '기존 모델 대비 손실 폭 감소, 원금 손실 발생' : '원금 손실 발생'}</p>` : `<p class="sub">${d.cagr >= 0 ? '원금 대비 수익 발생' : '원금 손실 발생'}</p>`;
+    const idxNote = `<p class="sub idx">${d.cagr > mkc ? '동일 기간 지수 상회' : '동일 기간 지수 미달'}(코스피 대용 연 ${pct(mkc)})</p>`;
     const ck = staticKey(r.s), cr = COST && ck ? COST[`${ck.m}__${ck.p}`] : null;
     const costCard = cr ? `<div class="card"><h3>거래 비용 가정별 결과</h3><p class="sub">동일 예측 모델, 비용 가정 변경 시 ${Y0}~${Y1}년 성과</p>
         <div class="scroll"><table><tr><th>비용 가정</th><th>연 수익률</th><th>최대 낙폭</th></tr>
@@ -381,7 +382,7 @@
     const askCard = `<div class="card" data-keep="1"><h3>AI 개선</h3>${['reduce_loss', 'less_trading', 'more_data'].map(k => `<button class="rowbtn" data-act="opt" data-v="${k}"><span>${CAT.improvements[k].label}</span><i>›</i></button>`).join('')}</div>`;
     return `${head}<div class="cols">
       <div class="card span herocard" data-keep="1"><div class="ha">${perSel}<p class="sub">${d.from.slice(0, 4)}${d.from.slice(0, 4) === d.to.slice(0, 4) ? '' : '~' + d.to.slice(0, 4)}년 과거 검증 · ${man(d.start_value)} 투자 가정</p>
-        <div class="hero ${cls(d.total_return)}">${won(d.end_value)} <small>${pct(d.total_return)} · 연 ${pct(d.cagr)}</small></div>${verdictNote}</div>
+        <div class="hero ${cls(d.total_return)}">${won(d.end_value)} <small>${pct(d.total_return)} · 연 ${pct(d.cagr)}</small></div>${verdictNote}${idxNote}</div>
         <div class="hc">${chart}</div>
         <div class="tiles">
           <div class="tile"><div class="k">최대 낙폭</div><div class="v down">${pct(d.mdd)}</div><div class="n">${d.mdd_peak.slice(2, 7).replace('-', '.')}~${d.mdd_trough.slice(2, 7).replace('-', '.')}${d.custom ? '' : d.mdd_recovered ? ' · 회복 ' + d.mdd_recovered.slice(2, 7).replace('-', '.') : ' · 미회복'}</div></div>
@@ -455,7 +456,7 @@
             <p class="sub">${vd[1]}<br>기존: ${man(b.end_value)} · ${pct(b.mdd)} · 연 ${Math.round(b.trades_per_year)}회${qs ? ` · 최종 평가 구간 ${pct(x.run.metrics.locked_final.total_return)}(기존 ${pct(base.run.metrics.locked_final.total_return)})` : ''}</p>
             <button class="btn ${hold ? 'ghost' : ''} small" data-act="adopt" data-v="${x.tag}">${hold ? '보류 후보 적용' : '후보 적용'}</button></div>`;
         }).join('')}
-        <div class="note">${qs ? `목적함수(${PRESET[S.spec.preset]}) 기준 최상위 후보: <b>${o.best}</b>. 수익률 또는 최대 낙폭 악화 시 채택 보류 판정. 최종 평가 구간 수치는 후보 선정에 미사용` : '수익률 또는 최대 낙폭 악화 후보는 채택 보류 판정'}</div>
+        <div class="note">${qs ? `목적함수(${PRESET[S.spec.preset]}) 기준 최상위 후보: <b>${o.best}</b>. 수익률 또는 최대 낙폭 악화 시 채택 보류 판정. 최종 평가 구간 수치는 후보 선정에 미사용` : '수익률 또는 최대 낙폭 악화 후보는 채택 보류 판정'}<br>과거 성과 순위와 이후 성과 순위의 상관 0.15(설정 512건 실측). 과거 성과 우수 후보의 이후 성과 미보장</div>
         <button class="btn ghost small" data-act="keep">기존 유지</button></div>
         <div class="card"><h3>버전별 가상 평가금액</h3>${compareChart(o.rows.filter(x => !x.error).map(x => ({ name: x.tag + ' ' + cname(x.change), short: x.tag, run: x.run })))}</div>`;
     }
@@ -500,7 +501,9 @@
       <div class="card"><h3>영웅문S# 연계 이용</h3>
         <div class="kv"><span>앱 설치·회원가입</span><span>AI 설정·실험 기록 이전</span></div>
         <div class="kv"><span>계좌 개설·인증</span><span>보유 종목·현금 기준 재산정</span></div>
-        <div class="kv"><span>자동 주문</span><span>채택 가능 판정 AI, 한도 설정, 주문 전 승인</span></div>
+        <div class="kv"><span>모의 운용</span><span>실주문 전 일정 기간 모의 운용</span></div>
+        <div class="kv"><span>자동 주문</span><span>고객 작성 조건 기반, 한도 설정, 주문 전 승인</span></div>
+        <div class="kv"><span>쏠림 한도</span><span>종목별 주문 집중 제한</span></div>
         <div class="kv"><span>운용 보고서</span><span>주간·월간 성과, 거래 내역, 개선 제안</span></div>
         <button class="btn small" disabled>영웅문S# 이동</button>
         <p class="muted">계좌 연계 기능은 설계안이며 준법 검토 전제. 시연 화면은 앱 연결·실계좌·주문 미지원</p></div></div>`;
@@ -510,7 +513,7 @@
       <div class="kv"><span>보유 기간</span><span>${s.h}거래일(${s.h === 5 ? '약 1주' : '약 1개월'})</span></div>
       <div class="kv"><span>최적화 기준</span><span>${PRESET[s.preset || 'balanced']}</span></div>
       ${(s.x || []).length + (s.rules || []).length ? `<div class="kv"><span>설계안 항목</span><span>${(s.x || []).length + (s.rules || []).length}개</span></div>` : ''}
-      ${action}<p class="muted">공유 제외: 수익률, 종목, 개인 자산 정보</p></div>`;
+      ${action}<p class="muted">공유 제외: 수익률, 종목, 개인 자산 정보. 수신자는 본인 조건으로 재학습</p></div>`;
   const shareUrl = () => location.origin + location.pathname + '#r=' + btoa(unescape(encodeURIComponent(JSON.stringify({ m: S.mode, s: S.cur ? S.cur.s : S.spec }))));
 
   function render() {

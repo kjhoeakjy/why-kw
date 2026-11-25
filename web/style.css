@@ -252,3 +252,4 @@ header.top h1{cursor:pointer}
   .side .card{padding:20px;margin-bottom:12px}
   .side .kv{font-size:13px;padding:7px 0}
 }
+.sub.idx{font-weight:600;color:var(--ink)}
