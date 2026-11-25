@@ -1,0 +1,127 @@
+{
+ "assumption": {
+  "customers": 10000,
+  "cash_per_customer": 10000000,
+  "period": [
+   "2019-01-02",
+   "2024-12-31"
+  ],
+  "configs": 512
+ },
+ "scenarios": {
+  "uniform": {
+   "daily_max_median": 0.20391170194375885,
+   "daily_max_p95": 0.6177881117549322,
+   "daily_max_max": 5.386508462965818,
+   "days_over_10pct_share": 0.8783783783783784,
+   "n_days": 296,
+   "sell_bad_days_max": 0.9190878352355507,
+   "worst": {
+    "date": "2019-11-25",
+    "name": "케이씨피드",
+    "flow_krw": -2581751347.65625,
+    "adv_krw": 479299599.25
+   }
+  },
+  "default80": {
+   "daily_max_median": 0.882088489402818,
+   "daily_max_p95": 2.804626601381225,
+   "daily_max_max": 21.635551194563373,
+   "days_over_10pct_share": 1.0,
+   "n_days": 296,
+   "sell_bad_days_max": 18.110400926423143,
+   "worst": {
+    "date": "2019-07-29",
+    "name": "영풍",
+    "flow_krw": 11402797656.25,
+    "adv_krw": 527039850.0
+   }
+  },
+  "top10_80": {
+   "daily_max_median": 0.9941253461284396,
+   "daily_max_p95": 2.786719444521058,
+   "daily_max_max": 8.709635217854295,
+   "days_over_10pct_share": 1.0,
+   "n_days": 296,
+   "sell_bad_days_max": 2.218705666928248,
+   "worst": {
+    "date": "2019-11-25",
+    "name": "케이씨피드",
+    "flow_krw": -4174524669.53125,
+    "adv_krw": 479299599.25
+   }
+  }
+ },
+ "top10": [
+  [
+   "prs-5-lightgbm__k5-b3-v0-m1",
+   0.313
+  ],
+  [
+   "prs-5-lightgbm__k5-b1-v0-m1",
+   0.3041
+  ],
+  [
+   "pvr-20-lightgbm__k5-b1-v3-m0",
+   0.2918
+  ],
+  [
+   "pvr-5-lightgbm__k5-b1-v0-m0",
+   0.2681
+  ],
+  [
+   "pr-5-lightgbm__k5-b1-v0-m1",
+   0.2676
+  ],
+  [
+   "pr-5-lightgbm__k10-b3-v0-m1",
+   0.2566
+  ],
+  [
+   "pvs-5-lightgbm__k5-b3-v0-m1",
+   0.248
+  ],
+  [
+   "pvs-5-lightgbm__k5-b1-v0-m1",
+   0.2335
+  ],
+  [
+   "prs-5-lightgbm__k5-b1-v0-m0",
+   0.213
+  ],
+  [
+   "prs-20-lightgbm__k5-b3-v3-m0",
+   0.2013
+  ]
+ ],
+ "baselines": {
+  "momentum_60d_h5": {
+   "cagr": -0.4557,
+   "mdd": -0.9751,
+   "trades_per_year": 98.1
+  },
+  "momentum_60d_h20": {
+   "cagr": -0.3352,
+   "mdd": -0.9142,
+   "trades_per_year": 67.6
+  },
+  "low_vol_60d_h5": {
+   "cagr": -0.0153,
+   "mdd": -0.2905,
+   "trades_per_year": 67.9
+  },
+  "low_vol_60d_h20": {
+   "cagr": 0.0024,
+   "mdd": -0.2918,
+   "trades_per_year": 36.5
+  },
+  "market_proxy": {
+   "cagr": 0.0294,
+   "mdd": -0.3574
+  },
+  "universe_equal": {
+   "cagr": -0.1356,
+   "mdd": -0.65
+  }
+ }
+}
