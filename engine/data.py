@@ -152,7 +152,7 @@ def build_panel(force: bool = False) -> pd.DataFrame:
         "start": str(df.Date.min().date()), "end": str(df.Date.max().date()),
         "universe_rows": int(df.in_universe.sum()),
         "source": "KRX 전종목 일별 시세 (FinanceData/marcap 공개 데이터셋)",
-        "notes": ["상장폐지 종목 포함(시점별 유니버스)", "현금배당 미반영", "보통주만, 스팩·리츠 제외"],
+        "notes": ["상장폐지 종목 포함(시점별 대상 종목)", "현금배당 미반영", "보통주만, 스팩·리츠 제외"],
     }
     (CACHE / "manifest.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1))
     return df
