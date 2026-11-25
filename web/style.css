@@ -1,8 +1,8 @@
 @font-face{font-family:"Pretendard Variable";font-weight:45 920;font-style:normal;font-display:swap;src:url("fonts/PretendardVariable.woff2") format("woff2-variations")}
 :root{
   --page:#f3f3f4;--surface:#ffffff;--surface2:#f4f4f5;--ink:#111111;--ink2:#55585e;--muted:#9a9da3;
-  --grid:#ececee;--axis:#d6d7da;--brand:#111111;--brand-ink:#ffffff;
-  --s1:#111111;--s2:#9a9da3;--s3:#9a9da3;--s4:#c4c6ca;
+  --grid:#ececee;--axis:#d6d7da;--brand:#18307e;--brand-ink:#ffffff;--pink:#d6006f;
+  --s1:#18307e;--s2:#9a9da3;--s3:#9a9da3;--s4:#c4c6ca;
   --good:#111111;--bad:#111111;--radius:18px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -32,7 +32,7 @@ td.up::before,td.down::before,.kv .up::before,.kv .down::before,.trio .up::befor
 /* 카드 */
 .card{background:var(--surface);border-radius:var(--radius);padding:20px;margin:12px 0}
 .card.tight{padding:16px 20px}
-.card.sel{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.card.sel{box-shadow:inset 0 0 0 1.5px var(--brand)}
 details.card{padding:0}
 details.card>summary{list-style:none;cursor:pointer;font-weight:600;font-size:15px;padding:18px 20px;display:flex;justify-content:space-between;align-items:center}
 details.card>summary::-webkit-details-marker{display:none}
@@ -48,7 +48,7 @@ details{margin:8px 0}summary{cursor:pointer;font-weight:600;font-size:14px;paddi
 
 /* 배지 */
 .badge{display:inline-block;font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:6px;background:var(--surface2);color:var(--ink2);white-space:nowrap}
-.badge.live,.badge.m{background:var(--ink);color:#fff}
+.badge.live,.badge.m{background:var(--pink);color:#fff}
 .badge.pre,.badge.p{background:var(--surface2);color:var(--ink2)}
 
 /* 선택 칩 */
@@ -119,7 +119,7 @@ pre.json{font:11.5px/1.45 ui-monospace,Menlo,monospace;background:var(--surface2
 .spinner.big{width:44px;height:44px;border-width:3.5px;margin:0}
 @keyframes sp{to{transform:rotate(360deg)}}
 .pbar{height:4px;border-radius:2px;background:var(--grid);overflow:hidden;margin:28px 40px 14px}
-.pbar span{display:block;height:100%;width:40%;background:var(--ink);border-radius:2px;animation:pb 1.4s ease-in-out infinite}
+.pbar span{display:block;height:100%;width:40%;background:var(--pink);border-radius:2px;animation:pb 1.4s ease-in-out infinite}
 @keyframes pb{0%{margin-left:-40%}100%{margin-left:100%}}
 
 /* 하단 탭 */
@@ -127,13 +127,13 @@ nav.tabs{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border
 nav.tabs div{display:flex;max-width:480px;width:100%}
 nav.tabs button{flex:1;background:none;border:0;padding:9px 4px 8px;font-size:11px;color:var(--muted);cursor:pointer;font-weight:500;display:flex;flex-direction:column;align-items:center;gap:3px}
 nav.tabs svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-nav.tabs button[aria-current=true]{color:var(--ink);font-weight:700}
+nav.tabs button[aria-current=true]{color:var(--brand);font-weight:700}
 
 /* 입력 */
 select,input[type=text],textarea{width:100%;font:inherit;padding:13px 14px;border-radius:12px;border:0;background:var(--surface2);color:var(--ink);outline:0}
 select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 20px) 55%,calc(100% - 15px) 55%;background-size:5px 5px;background-repeat:no-repeat;padding-right:36px}
 textarea{min-height:72px;resize:none}
-select:focus,input[type=text]:focus,textarea:focus{box-shadow:inset 0 0 0 1.5px var(--ink)}
+select:focus,input[type=text]:focus,textarea:focus{box-shadow:inset 0 0 0 1.5px var(--brand)}
 label.f{display:block;font-size:13px;color:var(--ink2);margin:14px 0 6px}
 
 /* 토스트 */
@@ -147,7 +147,7 @@ label.f{display:block;font-size:13px;color:var(--ink2);margin:14px 0 6px}
 .modepick button{position:relative;text-align:left;background:var(--surface);border:0;border-radius:var(--radius);padding:22px 44px 22px 20px;cursor:pointer;color:var(--ink);font:inherit}
 .modepick button::after{content:"›";position:absolute;right:20px;top:50%;transform:translateY(-50%);font-size:22px;color:var(--muted)}
 .modepick b{font-size:18px;font-weight:700;letter-spacing:-.4px;display:block;margin:2px 0 4px}
-.modepick em{font-style:normal;font-size:11px;letter-spacing:1.2px;color:var(--muted);display:block;font-weight:600}
+.modepick em{font-style:normal;font-size:11px;letter-spacing:1.2px;color:var(--pink);display:block;font-weight:600}
 
 /* 유의 사항 */
 details.disc{font-size:12px;color:var(--muted);margin:16px 4px}
@@ -156,3 +156,5 @@ details.disc li{margin:4px 0}details.disc ul{padding-left:16px;margin:6px 0}
 
 /* 모드별 */
 .my .opt-table{display:none}
+.home header.top h1{color:var(--brand)}
+.home header.top h1::after{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--pink);margin-left:5px;vertical-align:middle}

@@ -2,18 +2,18 @@ const pptxgen = require('pptxgenjs');
 const { applyTheme } = require('/root/.claude/skills/synced/63122878-a884-444f-aae4-af6d8490fa3c_b3988ff4-46c4-43e3-804b-a29f0de7ded6/pptx/scripts/apply_theme.js');
 const OUT = process.argv[2];
 const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malgun Gothic',
-  colors: { dk1: '0A0A0A', lt1: 'FFFFFF', dk2: '6B6B6B', lt2: 'F2F2F2', accent1: '0A0A0A', accent2: '6B6B6B', accent3: 'A6A6A6', accent4: 'D0D0D0', accent5: 'F2F2F2', accent6: '3A3A3A', hlink: '0A0A0A', folHlink: '6B6B6B' } };
+  colors: { dk1: '0A0A0A', lt1: 'FFFFFF', dk2: '6B6B6B', lt2: 'F2F2F2', accent1: '18307E', accent2: 'D6006F', accent3: 'A6A6A6', accent4: 'D0D0D0', accent5: 'F2F2F2', accent6: '3A3A3A', hlink: '0A0A0A', folHlink: '6B6B6B' } };
 (async () => {
   const pres = new pptxgen();
   pres.layout = 'LAYOUT_WIDE';
   pres.theme = { headFontFace: THEME.headFontFace, bodyFontFace: THEME.bodyFontFace };
   pres.title = 'Why Kiwoom? 나만의 AI를 키움'; pres.author = '김연주';
   const C = pres.SchemeColor, W = 13.333, M = 0.9;
-  pres.defineSlideMaster({ title: 'Dark', background: { color: '0A0A0A' }, objects: [
+  pres.defineSlideMaster({ title: 'Dark', background: { color: '18307E' }, objects: [
     { placeholder: { options: { name: 'title', type: 'title', x: M, y: 3.0, w: W - 2 * M, h: 0.8, fontSize: 32, bold: true, color: C.background1, align: 'left', valign: 'top', margin: 0 }, text: '' } } ] });
   pres.defineSlideMaster({ title: 'Light', background: { color: 'FFFFFF' }, objects: [
     { placeholder: { options: { name: 'title', type: 'title', x: M, y: 0.8, w: W - 2 * M, h: 0.6, fontSize: 22, bold: true, color: C.text1, align: 'left', valign: 'top', margin: 0 }, text: '' } },
-    { line: { x: M, y: 1.5, w: W - 2 * M, h: 0, line: { color: '0A0A0A', width: 1 } } },
+    { line: { x: M, y: 1.5, w: W - 2 * M, h: 0, line: { color: '18307E', width: 1.5 } } },
     { text: { text: '나만의 AI를 키움', options: { x: M, y: 6.85, w: 4, h: 0.3, fontSize: 9, color: C.text2, margin: 0 } } } ],
     slideNumber: { x: W - M - 0.6, y: 6.85, w: 0.6, h: 0.3, fontSize: 9, color: C.text2, align: 'right' } });
   const T = (s, text, o) => s.addText(text, { isTextBox: true, margin: 0, valign: 'top', color: C.text1, ...o });
@@ -23,7 +23,7 @@ const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malg
     s.addImage({ path, x, y, w, h, altText: name, objectName: name }); return w; };
   const SM = 11, BD = 14;
 
-  const box = (s, x, y, w, h, name, dark) => s.addShape(pres.ShapeType.rect, { x, y, w, h, fill: { color: dark ? C.text1 : C.background1 }, line: { color: C.text1, width: 1 }, objectName: name });
+  const box = (s, x, y, w, h, name, dark) => s.addShape(pres.ShapeType.rect, { x, y, w, h, fill: { color: dark ? C.accent1 : C.background1 }, line: { color: dark ? C.accent1 : C.text1, width: 1 }, objectName: name });
   const pic = (s, path, x, y, w, ratio, name) => { const h = w * ratio;
     s.addShape(pres.ShapeType.rect, { x: x - 0.03, y: y - 0.03, w: w + 0.06, h: h + 0.06, fill: { color: C.background1 }, line: { color: C.accent3, width: 0.75 }, objectName: name + ' 테두리' });
     s.addImage({ path, x, y, w, h, altText: name, objectName: name }); return h; };
@@ -31,10 +31,11 @@ const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malg
   // 1 표지
   pres.addSection({ title: '제안' });
   let s = pres.addSlide({ masterName: 'Dark', sectionTitle: '제안' });
-  T(s, '2026 신입사원 Challenge Mission  |  Why Kiwoom?', { x: M, y: 0.9, w: 9, h: 0.3, fontSize: SM, color: C.accent3 });
+  T(s, '2026 신입사원 Challenge Mission  |  Why Kiwoom?', { x: M, y: 0.9, w: 9, h: 0.3, fontSize: SM, color: C.accent4 });
+  s.addShape(pres.ShapeType.rect, { x: M, y: 2.62, w: 0.55, h: 0.07, fill: { color: C.accent2 }, line: { color: C.accent2, width: 0 }, objectName: '강조 막대' });
   s.addText('나만의 AI를 키움', { placeholder: 'title' });
-  T(s, '개인 투자 기준 학습 AI 서비스 제안', { x: M, y: 3.8, w: 9, h: 0.4, fontSize: BD, color: C.accent3 });
-  T(s, '키움증권 신입사원 22기 김연주', { x: M, y: 6.3, w: 6, h: 0.3, fontSize: SM, color: C.accent3 });
+  T(s, '개인 투자 기준 학습 AI 서비스 제안', { x: M, y: 3.8, w: 9, h: 0.4, fontSize: BD, color: C.accent4 });
+  T(s, '키움증권 신입사원 22기 김연주', { x: M, y: 6.3, w: 6, h: 0.3, fontSize: SM, color: C.accent4 });
   s.addNotes('개인의 투자 기준으로 투자 AI를 학습·검증·개선하는 서비스 제안입니다.');
 
   // 2 대상 고객·서비스 구성
@@ -46,7 +47,7 @@ const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malg
   [['01', '투자 기준 입력'], ['02', '개인 모델 학습'], ['03', '실제 데이터 검증'], ['04', '요청 기반 개선'], ['05', '보유 자산 연계']].forEach(([n, t], i) => {
     const y = 2.55 + i * (fh + 0.12), dark = i === 1;
     box(s, fx, y, fw, fh, `단계 ${n}`, dark);
-    T(s, n, { x: fx + 0.25, y: y + 0.19, w: 0.5, h: 0.25, fontSize: SM, color: dark ? C.accent3 : C.text2 });
+    T(s, n, { x: fx + 0.25, y: y + 0.19, w: 0.5, h: 0.25, fontSize: SM, color: dark ? C.accent4 : C.accent2 });
     T(s, t, { x: fx + 0.85, y: y + 0.15, w: fw - 1, h: 0.32, fontSize: 15, bold: true, color: dark ? C.background1 : C.text1 });
   });
   const ph = 3.45, py = 2.65;
@@ -96,12 +97,12 @@ const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malg
   s.addText('PoC 실험 결과', { placeholder: 'title' });
   [['629만 행', '국내주식 일별 시세'], ['20개', '학습 모델'], ['640건', '검증 실행']].forEach(([n, l], i) => {
     const y = 1.95 + i * 1.05;
-    T(s, n, { x: M, y, w: 2.3, h: 0.45, fontSize: 24, bold: true });
+    T(s, n, { x: M, y, w: 2.3, h: 0.45, fontSize: 24, bold: true, color: C.accent1 });
     T(s, l, { x: M, y: y + 0.5, w: 2.3, h: 0.25, fontSize: SM, color: C.text2 });
   });
   T(s, '실험별 연 수익률(%)', { x: 3.5, y: 1.9, w: 5, h: 0.25, fontSize: SM, color: C.text2 });
   s.addChart(pres.charts.BAR, [{ name: '연 수익률', labels: ['기본 설정', '거래 횟수 축소', '하락장 매수 중단', '위험 변수 추가', '비용 없음 가정', '슬리피지 3배', '코스피 대용'], values: [-10.7, -1.7, -2.9, -13.9, 1.9, -17.6, 2.9] }],
-    { x: 3.4, y: 2.15, w: 5.6, h: 3.5, barDir: 'bar', chartColors: ['0A0A0A'], showLegend: false, showValue: true, dataLabelFormatCode: '0.0', dataLabelFontSize: 10, dataLabelFontFace: '+mn-lt', dataLabelColor: '0A0A0A',
+    { x: 3.4, y: 2.15, w: 5.6, h: 3.5, barDir: 'bar', chartColors: ['18307E'], showLegend: false, showValue: true, dataLabelFormatCode: '0.0', dataLabelFontSize: 10, dataLabelFontFace: '+mn-lt', dataLabelColor: '0A0A0A',
       catAxisLabelFontSize: 10, catAxisLabelFontFace: '+mn-lt', catAxisLabelColor: '0A0A0A', catAxisOrientation: 'maxMin', catAxisLabelPos: 'low', valAxisHidden: true, valGridLine: { style: 'none' }, catGridLine: { style: 'none' },
       barGapWidthPct: 60, altText: '실험별 연 수익률 막대 차트', objectName: '연 수익률 차트' });
   const ow = 2.75; pic(s, 'e-opt-c.png', W - M - ow, 1.95, ow, 1000 / 700, '개선 후보 판정 화면');
@@ -116,7 +117,7 @@ const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malg
   s.addShape(pres.ShapeType.line, { x: jx0, y: jy, w: jx1 - jx0, h: 0, line: { color: C.text1, width: 1 }, objectName: '이용 단계 연결선' });
   js.forEach((t, i) => {
     const cx = jx0 + i * (jx1 - jx0) / 5, dark = i === 1;
-    s.addShape(pres.ShapeType.ellipse, { x: cx - r, y: jy - r, w: 2 * r, h: 2 * r, fill: { color: dark ? C.text1 : C.background1 }, line: { color: C.text1, width: 1 }, objectName: `이용 단계 ${i + 1}` });
+    s.addShape(pres.ShapeType.ellipse, { x: cx - r, y: jy - r, w: 2 * r, h: 2 * r, fill: { color: dark ? C.accent2 : C.background1 }, line: { color: dark ? C.accent2 : C.text1, width: 1 }, objectName: `이용 단계 ${i + 1}` });
     T(s, String(i + 1), { x: cx - r, y: jy - 0.11, w: 2 * r, h: 0.22, fontSize: 10, align: 'center', color: dark ? C.background1 : C.text1 });
     T(s, t, { x: cx - 1, y: jy + 0.38, w: 2, h: 0.28, fontSize: 13, bold: true, align: 'center' });
   });
