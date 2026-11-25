@@ -63,16 +63,16 @@ const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malg
   s = pres.addSlide({ masterName: 'Light', sectionTitle: '제안' });
   s.addText('타 증권사 고객이 키움을 선택할 새로운 이유', { placeholder: 'title' });
   T(s, '고객이 선택한 투자 기준으로 개인 전용 AI를 학습하고 실제 데이터로 검증·개선하는 서비스', { x: M, y: 1.72, w: W - 2 * M, h: 0.32, fontSize: 15, bold: true });
-  T(s, '대상: 투자 기준은 있으나 검증 수단이 없는 타사 국내주식 직접투자자', { x: M, y: 2.1, w: W - 2 * M, h: 0.26, fontSize: SM, color: C.text2 });
+  T(s, '대상: 투자 기준은 있으나 검증 수단이 없는 타사 일반 투자자', { x: M, y: 2.1, w: W - 2 * M, h: 0.26, fontSize: SM, color: C.text2 });
   const cw = (W - 2 * M) / 4, fph = 3.4, fpw = fph / 2;
-  [['01', '투자 기준 선택', '중시 정보 · 보유 기간 · 투자금', 'f1-set.png'], ['02', '개인 AI 학습 · 검증', '실제 과거 시세 · 거래 비용 반영', 'f2-home.png'], ['03', '요청 기반 개선', '후보 비교 · 채택 판정', 'f3-opt.png'], ['04', '키움 계좌 연계', '자동 주문 · 운용 보고서(설계안)', 'f4-link.png']].forEach(([n, t, d, img], i) => {
+  [['01', '투자 기준 선택', '일반 · 고급 설정 중 선택', 'f1-set.png'], ['02', '개인 AI 학습 · 검증', '실제 과거 시세 · 거래 비용 반영', 'f2-home.png'], ['03', '요청 기반 개선', '후보 비교 · 채택 판정', 'f3-opt.png'], ['04', '키움 계좌 연계', '자동 주문 · 운용 보고서(설계안)', 'f4-link.png']].forEach(([n, t, d, img], i) => {
     const x = M + i * cw;
     T(s, n, { x, y: 2.62, w: 0.4, h: 0.26, fontSize: SM, color: C.accent2, bold: true });
     T(s, t, { x: x + 0.4, y: 2.58, w: cw - 0.5, h: 0.3, fontSize: 14, bold: true });
     T(s, d, { x: x + 0.4, y: 2.9, w: cw - 0.5, h: 0.24, fontSize: 10, color: C.text2 });
     phone(s, img, x + 0.4, 3.28, fph, t + ' 화면');
   });
-  s.addNotes('본 제안은 고객이 선택한 투자 기준으로 개인 전용 AI를 학습하는 서비스입니다. 고객은 중시하는 정보와 보유 기간을 선택합니다. 서비스는 해당 기준으로 예측 모델을 학습하고 실제 과거 시세에 거래 비용을 반영하여 검증합니다. 고객이 손실 축소 등 개선 방향을 요청하면 후보를 비교하고 채택 여부를 판정합니다. 키움 계좌 개설 고객에게는 자동 주문과 운용 보고서를 제공하며 해당 기능은 준법 검토가 필요한 설계안입니다. 대상 고객은 가설이며 인터뷰 결과가 아닙니다.');
+  s.addNotes('본 제안은 고객이 선택한 투자 기준으로 개인 전용 AI를 학습하는 서비스입니다. 고객은 중시하는 정보와 보유 기간을 선택하며 고급 설정에서는 운용 방식, 회피 조건, 우선 목표를 추가로 지정합니다. 서비스는 해당 기준으로 예측 모델을 학습하고 실제 과거 시세에 거래 비용을 반영하여 검증합니다. 고객이 손실 축소 등 개선 방향을 요청하면 후보를 비교하고 채택 여부를 판정합니다. 키움 계좌 개설 고객에게는 자동 주문과 운용 보고서를 제공하며 해당 기능은 준법 검토가 필요한 설계안입니다. 대상 고객은 가설이며 인터뷰 결과가 아닙니다.');
 
   // 3 Why Kiwoom
   s = pres.addSlide({ masterName: 'Light', sectionTitle: '제안' });
@@ -89,14 +89,10 @@ const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malg
   box(s, M, dy + 1.35, dw, 1.15, '제안 서비스', true);
   T(s, '나만의 AI를 키움', { x: M, y: dy + 1.6, w: dw, h: 0.35, fontSize: 18, bold: true, color: C.background1, align: 'center' });
   T(s, '개인 모델 학습 · 검증 · 개선', { x: M, y: dy + 2.02, w: dw, h: 0.25, fontSize: SM, color: C.accent4, align: 'center' });
-  const hw = (dw - 0.2) / 2;
-  [['MY AI', '간편모드'], ['QUANT STUDIO', '일반모드']].forEach(([k, v], i) => {
-    const x = M + i * (hw + 0.2), y = dy + 2.85;
-    s.addShape(pres.ShapeType.line, { x: x + hw / 2, y: dy + 2.5, w: 0, h: 0.35, line: { color: C.text1, width: 1 }, objectName: `하위 연결선 ${i + 1}` });
-    box(s, x, y, hw, 0.9, `모드 ${i + 1}`);
-    T(s, k, { x, y: y + 0.18, w: hw, h: 0.3, fontSize: 13, bold: true, align: 'center' });
-    T(s, v, { x, y: y + 0.5, w: hw, h: 0.25, fontSize: SM, color: C.text2, align: 'center' });
-  });
+  s.addShape(pres.ShapeType.line, { x: M + dw / 2, y: dy + 2.5, w: 0, h: 0.35, line: { color: C.text1, width: 1 }, objectName: '하위 연결선' });
+  box(s, M, dy + 2.85, dw, 0.9, '이용 대상');
+  T(s, '일반 투자자', { x: M, y: dy + 3.03, w: dw, h: 0.3, fontSize: 13, bold: true, align: 'center' });
+  T(s, '코딩 · API 없이 항목 선택으로 이용, 일반 · 고급 설정 제공', { x: M, y: dy + 3.35, w: dw, h: 0.25, fontSize: SM, color: C.text2, align: 'center' });
   const cx2 = 9.0, cw2 = W - M - cx2;
   const ey = dy;
   T(s, '도입 효과', { x: cx2, y: ey - 0.3, w: cw2, h: 0.25, fontSize: SM, color: C.accent2, bold: true });

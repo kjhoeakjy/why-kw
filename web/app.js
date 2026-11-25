@@ -139,7 +139,7 @@
   const chartLeave = el => { $('.cross', el).style.display = 'none'; $('.tip', el).style.display = 'none'; };
 
   /* ---------- 화면 조각 ---------- */
-  const header = () => `<header class="top">${S.mode ? '<button class="back" data-act="home" aria-label="처음으로">‹</button>' : ''}<h1>${S.mode === 'qs' ? 'QUANT STUDIO' : S.mode === 'my' ? 'MY AI' : '나만의 AI를 키움'}</h1></header>`;
+  const header = () => `<header class="top">${S.mode ? '<button class="back" data-act="home" aria-label="처음으로">‹</button>' : ''}<h1>나만의 AI를 키움</h1></header>`;
   const ICON = {
     home: '<svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg>',
     set: '<svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>',
@@ -159,12 +159,12 @@
       <div class="intro"><h2>개인 투자 기준 학습 AI</h2>
         <p class="sub">계좌 개설 전 체험 가능</p></div>
       ${f ? recipeCard(f.spec, '<button class="btn small" data-act="fork">설정 복제 후 수정</button>', '공유받은 설정') : ''}
-      <div class="modepick">
-        <button data-act="mode" data-v="my"><em>MY AI</em><b>간편 설정</b><span class="sub">항목 선택으로 AI 구성</span></button>
-        <button data-act="mode" data-v="qs"><em>QUANT STUDIO</em><b>상세 설계</b><span class="sub">데이터·모델·전략 직접 설정</span></button>
-      </div>
+      <div class="card"><h3>이용 순서</h3>
+        <div class="kv"><span>01 투자 기준 선택</span><span>중시 정보, 보유 기간, 운용 방식</span></div>
+        <div class="kv"><span>02 AI 학습·검증</span><span>실제 과거 시세, 거래 비용 반영</span></div>
+        <div class="kv"><span>03 AI 개선</span><span>후보 비교, 채택 판정</span></div>
+        <button class="btn" style="margin-top:14px" data-act="mode" data-v="my">${S.cur ? '나의 AI 조회' : '투자 기준 설정 시작'}</button></div>
       <details class="card"><summary>서비스 안내</summary>
-        <div class="kv"><span>이용 순서</span><span>기준 선택, 학습, 검증, 개선</span></div>
         <div class="kv"><span>검증 방식</span><span>실제 과거 시세, 거래 비용 반영</span></div>
         <div class="kv"><span>사용 데이터</span><span>국내주식 일봉 ${CAT.data.start.slice(0, 4)}~${CAT.data.end.slice(0, 7)}</span></div>
         <div class="kv"><span>이용 조건</span><span>계좌 개설 불필요, 주문 미연결</span></div>
@@ -175,7 +175,10 @@
   function createMy() {
     const s = S.spec, on = g => s.groups.includes(g);
     const chip = (g, l) => `<button class="chip" data-act="grp" data-v="${g}" aria-pressed="${on(g)}" ${g === 'price' ? 'data-lock="1"' : ''}>${l}</button>`;
+    const adv = !!S.adv;
     return `<h2>투자 기준 설정</h2>
+      <div class="seg"><button data-act="lvl" data-v="0" aria-pressed="${!adv}">일반</button><button data-act="lvl" data-v="1" aria-pressed="${adv}">고급</button></div>
+      <p class="sub" style="margin:8px 4px 14px">${adv ? '운용 방식, 회피 조건, 우선 목표 직접 설정' : '핵심 항목 3가지 선택'}</p>
       <div class="card"><h3>중시하는 정보</h3>
         <div class="chips">${chip('price', '가격 흐름(필수)')}${chip('volume', '거래량')}${chip('risk', '하락 위험')}${chip('size', '기업 규모')}
           <button class="chip" disabled title="자료 미확보">기업 실적</button><button class="chip" disabled>배당</button><button class="chip" disabled>수급</button></div>
@@ -183,13 +186,30 @@
         </div><div class="card"><h3>보유 기간</h3>
         <div class="chips"><button class="chip" data-act="set" data-k="h" data-v="5" aria-pressed="${s.h === 5}">단기(약 1주)</button>
           <button class="chip" data-act="set" data-k="h" data-v="20" aria-pressed="${s.h === 20}">중기(약 1개월)</button></div>
-        </div><div class="card"><h3>가상 투자금</h3>
+        </div>${adv ? `<div class="card"><h3>분산 정도</h3>
+        <div class="chips"><button class="chip" data-act="set" data-k="k" data-v="5" aria-pressed="${s.k === 5}">집중(5종목)</button>
+          <button class="chip" data-act="set" data-k="k" data-v="10" aria-pressed="${s.k === 10}">분산(10종목)</button></div>
+        </div><div class="card"><h3>교체 방식</h3>
+        <div class="chips"><button class="chip" data-act="set" data-k="buf" data-v="1" aria-pressed="${s.buf === 1}">정기 교체</button>
+          <button class="chip" data-act="set" data-k="buf" data-v="3" aria-pressed="${s.buf > 1}">보유 유지 우선</button></div>
+        </div><div class="card"><h3>회피 조건(선택)</h3>
+        <div class="chips"><button class="chip" data-act="tog" data-k="vf" aria-pressed="${s.vf > 0}">변동성 큰 종목 제외</button>
+          <button class="chip" data-act="tog" data-k="mf" aria-pressed="${!!s.mf}">하락장 신규 매수 중단</button></div>
+        </div><div class="card"><h3>우선 목표</h3>
+        <div class="chips">${Object.keys(PRESET).map(k => `<button class="chip" data-act="set" data-k="preset" data-v="${k}" aria-pressed="${s.preset === k}">${PRESET[k]}</button>`).join('')}</div>
+        <p class="muted">개선 후보 비교 시 우선순위 기준으로 사용</p>
+        </div>` : ''}<div class="card"><h3>가상 투자금</h3>
         <div class="chips"><button class="chip" data-act="set" data-k="cash" data-v="1000000" aria-pressed="${s.cash === 1e6}">100만 원</button>
           <button class="chip" data-act="set" data-k="cash" data-v="10000000" aria-pressed="${s.cash === 1e7}">1,000만 원</button></div>
         </div><div class="card"><h3>추가 요청(선택)</h3>
         <textarea id="nl" placeholder="예: 변동성 큰 종목 제외, 거래 횟수 축소"></textarea>
         <button class="btn ghost small" data-act="nl">입력 내용 반영</button>
         ${S.planNote ? `<div class="note">${S.planNote}</div>` : ''}</div>
+      ${adv ? `<div class="card"><h3>나의 전략 반영 <span class="badge">준비 중</span></h3>
+        <div class="kv"><span>관심 업종·종목 범위</span><span>대상 종목 직접 지정</span></div>
+        <div class="kv"><span>나의 매매 규칙</span><span>매수·매도 조건 직접 입력</span></div>
+        <div class="kv"><span>나의 거래 내역</span><span>키움 계좌 거래 기록 학습</span></div>
+        <p class="muted">계좌 개설 고객 대상 제공 예정(설계안)</p></div>` : ''}
       ${planCard()}
       <div class="cta"><button class="btn" data-act="run">${S.cur ? '변경 기준 재학습' : 'AI 학습 시작'}</button></div>`;
   }
@@ -200,6 +220,7 @@
       <div class="kv"><span>반영 정보</span><span>${s.groups.map(g => SHORT[g]).join('·')}</span></div>
       <div class="kv"><span>운용</span><span>점수 상위 ${s.k}종목, ${s.h === 5 ? '약 1주' : '약 1개월'} 주기 교체</span></div>
       ${[s.buf > 1 ? '보유 종목 교체 축소' : null, s.vf > 0 ? '변동성 큰 종목 제외' : null, s.mf ? '하락장 신규 매수 중단' : null].filter(Boolean).map(t => `<div class="kv"><span>추가 조건</span><span>${t}</span></div>`).join('')}
+      <div class="kv"><span>우선 목표</span><span>${PRESET[s.preset || 'balanced']}</span></div>
       <div class="kv"><span>검증 기간</span><span>${CAT.periods.development[0].slice(0, 4)}~${CAT.periods.development[1].slice(0, 4)}년</span></div>
       <div class="kv"><span>거래 비용</span><span>수수료·세금·슬리피지 반영</span></div></div>`;
     return `<div class="card"><h3>연구 계획</h3>
@@ -334,14 +355,14 @@
           return `<tr class="${x.tag === o.best ? 'bestrow' : ''}"><td><span class="vtag">${x.tag}</span> ${x.kind === 'base' ? '기존' : `<span class="muted">${x.retrained ? '재학습' : '운용 변경'}</span>`}</td>
             <td class="${cls(d.cagr)}">${pct(d.cagr)}</td><td>${pct(d.mdd)}</td><td>${Math.round(d.trades_per_year)}</td><td>${x.J.toFixed(3)}</td><td>${(+x.run.model.ic.dev.rank_ic_mean).toFixed(3)}</td></tr>`;
         })()).join('')}</table></div>
-        ${o.rows.filter(x => !x.error && x.kind !== 'base').map(x => {
+        ${o.rows.filter(x => !x.error && x.kind !== 'base').sort((a, b) => qs ? 0 : b.J - a.J).map((x, ci) => {
           const d = x.run.metrics.development, b = base.run.metrics.development;
           const say = [];
           say.push(d.mdd > b.mdd ? `최대 낙폭 축소(${pct(b.mdd)}, ${pct(d.mdd)})` : d.mdd < b.mdd ? `최대 낙폭 확대(${pct(b.mdd)}, ${pct(d.mdd)})` : '최대 낙폭 동일');
           say.push(d.end_value > b.end_value ? `최종 평가금액 ${man(d.end_value - b.end_value)} 증가` : `최종 평가금액 ${man(b.end_value - d.end_value)} 감소`);
           say.push(`연 거래 ${Math.round(b.trades_per_year)}회, 변경 후 ${Math.round(d.trades_per_year)}회`);
           const vd = verdict(d, b), hold = vd[0] === '채택 보류';
-          return `<div class="cand"><div class="cand-h"><b>${esc(cname(x.change))}</b><span class="badge ${hold ? 'pre' : 'm'}">${vd[0]}</span></div>
+          return `<div class="cand"><div class="cand-h"><b>${esc(cname(x.change))}</b><span class="badge ${hold ? 'pre' : 'm'}">${vd[0]}</span></div>${!qs && ci === 0 && !hold ? `<p class="muted" style="margin:0 0 8px">우선 목표(${PRESET[S.spec.preset || 'balanced']}) 기준 1순위</p>` : ''}
             <div class="trio"><div><span>평가금액</span><b class="${cls(d.total_return)}">${man(d.end_value)}</b></div><div><span>최대 낙폭</span><b>${pct(d.mdd)}</b></div><div><span>연 거래</span><b>${Math.round(d.trades_per_year)}회</b></div></div>
             <p class="sub">${vd[1]}<br>기존: ${man(b.end_value)} · ${pct(b.mdd)} · 연 ${Math.round(b.trades_per_year)}회${qs ? ` · 최종 평가 구간 ${pct(x.run.metrics.locked_final.total_return)}(기존 ${pct(base.run.metrics.locked_final.total_return)})` : ''}</p>
             <button class="btn ${hold ? 'ghost' : ''} small" data-act="adopt" data-v="${x.tag}">${hold ? '보류 후보 적용' : '후보 적용'}</button></div>`;
@@ -438,7 +459,7 @@
   }
   async function runCurrent() {
     const s = { ...S.spec, groups: [...S.spec.groups] };
-    if (S.cur && sameSpec(s, S.cur.s)) { S.tab = 'validate'; render(); window.scrollTo(0, 0); return toast('변경 사항 없음'); }
+    if (S.cur && sameSpec({ ...s, preset: S.cur.s.preset }, S.cur.s)) { const ch = s.preset !== S.cur.s.preset; S.cur.s.preset = s.preset; S.tab = 'validate'; render(); window.scrollTo(0, 0); return toast(ch ? '우선 목표 변경 반영' : '변경 사항 없음'); }
     const prev = S.cur ? S.versions : null;
     const r = await withBusy(S.mode === 'qs' ? '연구 실행 중' : '학습 중', async log => {
       log(`[설정] ${describe(s).join(' · ')}`);
@@ -512,10 +533,12 @@
     const a = b.dataset.act, v = b.dataset.v, s = S.spec;
     if (a === 'home') { S.mode = null; S.tab = 'create'; }
     else if (a === 'mode') { if (S.last && S.last !== v) { S.store = S.store || {}; S.store[S.last] = { cur: S.cur, versions: S.versions, opt: S.opt, cashDemo: S.cashDemo, spec: S.spec }; Object.assign(S, S.store[v] || { cur: null, versions: [], opt: null, cashDemo: null, spec: { ...S.spec, groups: [...S.spec.groups] } }); } S.last = v; S.mode = v; S.tab = S.cur ? 'validate' : 'create'; window.scrollTo(0, 0); }
-    else if (a === 'fork') { S.spec = { ...S.spec, ...S.forked.spec }; S.mode = S.forked.mode || 'my'; S.forked = null; S.tab = 'create'; toast('설정 복제 완료'); }
+    else if (a === 'fork') { S.spec = { ...S.spec, ...S.forked.spec }; S.mode = 'my'; S.forked = null; S.tab = 'create'; S.adv = S.spec.k !== 5 || S.spec.buf > 1 || S.spec.vf > 0 || !!S.spec.mf; toast('설정 복제 완료'); }
     else if (a === 'tab') { S.tab = v; window.scrollTo(0, 0); }
-    else if (a === 'grp') { if (b.dataset.lock) return toast('가격 흐름은 필수 항목'); s.groups = s.groups.includes(v) ? s.groups.filter(g => g !== v) : [...s.groups, v]; }
-    else if (a === 'set') { s[b.dataset.k] = +v; }
+    else if (a === 'grp') { if (b.dataset.lock) return toast('가격 흐름은 필수 항목'); const ng = s.groups.includes(v) ? s.groups.filter(g => g !== v) : [...s.groups, v]; if (!LIVE && !Object.values(CAT.feature_sets).some(f => [...f].sort().join() === [...ng].sort().join())) return toast('해당 조합은 준비 중'); s.groups = ng; }
+    else if (a === 'set') { s[b.dataset.k] = b.dataset.k === 'preset' ? v : +v; }
+    else if (a === 'lvl') { S.adv = v === '1'; }
+    else if (a === 'tog') { if (b.dataset.k === 'vf') s.vf = s.vf > 0 ? 0 : 0.3; else s.mf = !s.mf; }
     else if (a === 'nl') return parseNl();
     else if (a === 'run') return runCurrent();
     else if (a === 'opt') { S.tab = 'optimize'; return runOpt(v); }
@@ -548,7 +571,7 @@
       try { COST = await fetch('data/cost.json').then(r => r.ok ? r.json() : null); } catch (e) { /* 비용 비교 생략 */ }
       try { const h = await fetch('api/health').then(r => r.ok ? r.json() : null); if (h && h.mode === 'live') { LIVE = true; AGENT = !!h.agent; } } catch (e) { /* 정적 모드 */ }
       const qm = new URLSearchParams(location.search).get('mode');
-      if (qm === 'my' || qm === 'qs') S.mode = qm;
+      if (qm === 'my') S.mode = qm;
       const m = location.hash.match(/#r=(.+)/);
       if (m) { try { const o = JSON.parse(decodeURIComponent(escape(atob(m[1])))); if (o.s && Array.isArray(o.s.groups)) S.forked = { mode: o.m, spec: o.s }; } catch (e) { /* 잘못된 링크 무시 */ } }
       render();
