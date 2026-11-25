@@ -17,7 +17,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 RAW = ROOT / "data" / "raw"
 CACHE = ROOT / "data" / "cache"
 
-SNAPSHOT_END = "2026-09-30"      # 데이터 스냅샷 기준일(이후 자료는 사용·표시하지 않음)
+SNAPSHOT_END = "2026-09-30"      # 자료 식별번호 기준일(이후 자료는 사용·표시하지 않음)
 SNAPSHOT_START = "2015-01-02"
 UNIVERSE_SIZE = 300              # 결정일 기준 20일 평균 거래대금 상위 종목 수
 HORIZONS = (5, 20)

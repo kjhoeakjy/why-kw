@@ -133,7 +133,7 @@ def run(pred: pd.DataFrame, sp: dict, pp: dict, fr: Frames, log=None) -> dict:
                     skipped["unaffordable"] += 1
                     ledger.append({"date": str(d.date()), "side": "매수불가", "code": code, "name": fr.names.get(code, code),
                                    "shares": 0, "price": round(float(o)), "amount": 0, "cost": 0,
-                                   "note": "배정 금액으로 1주를 살 수 없음"})
+                                   "note": "배정 금액 1주 미만"})
                     continue
                 gross = shares * px
                 cost = gross * cm["fee"]
@@ -230,4 +230,4 @@ def rolling_windows(eq: pd.Series, months: int = 6) -> dict:
     return {"months": months, "n_windows": int(len(v)), "p10": round(float(np.quantile(v, .1)), 4),
             "median": round(float(np.median(v)), 4), "p90": round(float(np.quantile(v, .9)), 4),
             "loss_share": round(float((v < 0).mean()), 3), "worst": round(float(v.min()), 4),
-            "note": "구간이 서로 겹치므로 독립 표본이 아니며, 과거 빈도는 미래 확률이 아닙니다."}
+            "note": "구간이 중첩되어 독립 표본이 아니며 과거 빈도는 미래 확률이 아님"}

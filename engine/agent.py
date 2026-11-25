@@ -22,7 +22,7 @@ TOOL = {
             "horizon_days": {"type": "integer", "enum": list(data.HORIZONS)},
             "algorithm": {"type": "string", "enum": list(model.ALGORITHMS)},
             "top_k": {"type": "integer", "minimum": 1, "maximum": 30},
-            "keep_buffer": {"type": "number", "description": "1=매번 교체, 3=상위 3배수 안이면 계속 보유(거래 감소)"},
+            "keep_buffer": {"type": "number", "description": "1=매번 교체, 3=상위 3배수 이내 보유 유지(거래 감소)"},
             "volatility_filter": {"type": "number", "description": "0~0.5. 변동성 상위 비율 제외"},
             "market_filter": {"type": "boolean", "description": "하락장 신규 매수 중단"},
             "initial_cash_krw": {"type": "integer"},

@@ -89,6 +89,6 @@ def test_optimize_records_all_candidates(base):
     o = R.optimize(BASE, "less_trading")
     assert o["candidates"][0]["version"] == "V1"
     kinds = {c["change"]: c for c in o["candidates"][1:]}
-    assert kinds["상위 3배수 안이면 계속 보유"]["retrained"] is False
+    assert kinds["상위 3배수 이내 보유 유지"]["retrained"] is False
     assert kinds["예측·보유 기간 20거래일"]["retrained"] is True
     assert kinds["예측·보유 기간 20거래일"]["dev"]["trades_per_year"] < o["candidates"][0]["dev"]["trades_per_year"]

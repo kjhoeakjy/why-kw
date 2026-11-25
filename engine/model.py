@@ -125,7 +125,7 @@ def train_walk_forward(ms: dict, panel: pd.DataFrame, log=None) -> dict:
             "train_seconds": round(time.time() - t0, 2), "ic": {"dev": seg(DEV_START, DEV_END), "final": seg(FINAL_START, FINAL_END)},
             "importance_last_fold": imp,
             "importance_kind": "회귀계수 절대값 비중" if ms["algorithm"] == "ridge" else "분할 이득(gain) 비중",
-            "target_note": f"결정일 종가 이후 다음 거래일 시가 진입, {h}거래일 뒤 시가 청산 수익률(유니버스 평균 대비 초과분을 학습)"}
+            "target_note": f"결정일 익일 시가 진입, {h}거래일 뒤 시가 청산 수익률(대상 종목 평균 대비 초과 수익률 학습)"}
     log(f"[학습 완료] 모델 {info['model_id']} · 변수 {len(feats)}개 · {info['train_seconds']}초 · "
         f"개발구간 Rank IC {info['ic']['dev']['rank_ic_mean']:+.4f}")
     return {"pred": pred, "info": info}

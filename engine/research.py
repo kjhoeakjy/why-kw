@@ -69,7 +69,7 @@ def get_model(ms: dict, log) -> tuple[pd.DataFrame, dict, str]:
     mid = model.model_id(ms)
     f, g = PRED_CACHE / f"{mid}.parquet", PRED_CACHE / f"{mid}.json"
     if f.exists() and g.exists():
-        log(f"[모델 재사용] 동일 학습 명세의 모델 {mid} 을 다시 학습하지 않고 사용")
+        log(f"[모델 재사용] 동일 학습 설정의 모델 {mid} 재학습 없이 사용")
         return pd.read_parquet(f), json.loads(g.read_text()), "reused"
     log(f"[신규 학습] 모델 {mid} · {ms['algorithm']} · 데이터 {ms['feature_groups']} · {ms['target']['horizon_days']}거래일")
     out = model.train_walk_forward(ms, panel(), log)
@@ -103,7 +103,7 @@ def execute(spec_in: dict, log=None, save: bool = True) -> dict:
     t0 = time.time()
     spec = normalize(spec_in)
     rid = run_id(spec)
-    _log(f"[명세 확정] 실행 {rid} · 데이터 스냅샷 {spec['model_spec']['data_snapshot_id']}")
+    _log(f"[설정 확정] 실행 {rid} · 자료 식별번호 {spec['model_spec']['data_snapshot_id']}")
     pred, minfo, how = get_model(spec["model_spec"], _log)
     res = bt.run(pred, spec["strategy_policy"], spec["portfolio_policy"], frames(), _log)
     eq = res["equity"]
@@ -112,7 +112,7 @@ def execute(spec_in: dict, log=None, save: bool = True) -> dict:
     full = bt.seg_metrics(eq, model.DEV_START, model.FINAL_END, res["ledger"])
     bench = {}
     for key, s, label in (("market", res["bm_market"], "코스피 시가총액 가중(지수 대용, 비용·배당 미반영)"),
-                          ("universe", res["bm_universe"], "유니버스 300종목 동일가중(비용 미반영)")):
+                          ("universe", res["bm_universe"], "대상 300종목 동일가중(비용 미반영)")):
         bench[key] = {"label": label, "dev": bt.seg_metrics(s, model.DEV_START, model.DEV_END, []),
                       "final": bt.seg_metrics(s, model.FINAL_START, model.FINAL_END, [])}
     vals, dts = _series(eq)
@@ -135,10 +135,10 @@ def execute(spec_in: dict, log=None, save: bool = True) -> dict:
         "ledger_head": ledger[:12], "ledger_tail": ledger[-24:],
         "open_positions_at_end": res["open_positions"],
         "disclosures": [
-            f"과거 데이터({data.SNAPSHOT_START}~{data.SNAPSHOT_END}) 기반 가상 연구 결과이며 미래 수익을 보장하지 않습니다.",
-            "현재 시점의 종목 추천이나 매매 권유가 아닙니다. 실제 계좌·실주문은 연결되어 있지 않습니다.",
-            "현금배당 미반영, 일봉 시가 체결 가정(호가·체결량 미반영), 비용은 고정 가정입니다.",
-            "잠금 평가 구간은 후보 선택에 사용하지 않았습니다. 이 결과를 보고 다시 최적화하면 독립 평가가 아닙니다.",
+            f"과거 데이터({data.SNAPSHOT_START}~{data.SNAPSHOT_END}) 기반 가상 연구 결과이며 미래 수익을 보장하지 않음",
+            "현재 시점의 종목 추천 또는 매매 권유가 아님. 실제 계좌·주문 미연결",
+            "현금배당 미반영, 일봉 시가 체결 가정(호가·체결량 미반영), 비용 고정 가정",
+            "최종 평가 구간은 후보 선정에 미사용. 해당 결과를 근거로 재최적화할 경우 독립 평가가 아님",
         ],
         "logs": logs, "elapsed_seconds": round(time.time() - t0, 2),
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
@@ -152,33 +152,33 @@ def execute(spec_in: dict, log=None, save: bool = True) -> dict:
 # ---------------------------------------------------------------- 개선(OPTIMIZE)
 IMPROVEMENTS = {
     "reduce_loss": {
-        "label": "큰 손실 줄이기",
-        "plan": "① 변동성·위험 정보를 추가해 모델을 다시 학습 ② 기존 모델은 그대로 두고 변동성 상위 30% 종목 제외 ③ 시장이 60일 평균 아래일 때 신규 매수 중단",
+        "label": "손실 축소",
+        "plan": "후보 3건 비교: 변동성·위험 변수 추가 재학습 / 변동성 상위 30% 종목 제외 / 하락장 신규 매수 중단",
         "candidates": [
             {"tag": "M", "change": "변동성·위험 변수 추가", "kind": "model", "patch": {"model_spec": {"add_groups": ["risk"]}}},
             {"tag": "P", "change": "변동성 상위 30% 종목 제외", "kind": "strategy", "patch": {"strategy_policy": {"volatility_filter": 0.3}}},
             {"tag": "P", "change": "하락장 신규 매수 중단", "kind": "strategy", "patch": {"strategy_policy": {"market_filter": True}}},
         ]},
     "less_trading": {
-        "label": "거래 횟수 줄이기",
-        "plan": "① 기존 모델 유지 + 상위권에 머무는 종목은 계속 보유 ② 예측·보유 기간을 20거래일로 늘려 모델을 다시 학습",
+        "label": "거래 횟수 축소",
+        "plan": "후보 2건 비교: 상위권 종목 보유 유지 / 예측·보유 기간 20거래일 재학습",
         "candidates": [
-            {"tag": "P", "change": "상위 3배수 안이면 계속 보유", "kind": "strategy", "patch": {"strategy_policy": {"keep_buffer": 3.0}}},
+            {"tag": "P", "change": "상위 3배수 이내 보유 유지", "kind": "strategy", "patch": {"strategy_policy": {"keep_buffer": 3.0}}},
             {"tag": "M", "change": "예측·보유 기간 20거래일", "kind": "model", "patch": {"model_spec": {"horizon_days": 20}}},
         ]},
     "more_data": {
-        "label": "다른 정보 반영하기",
-        "plan": "① 기업 규모(시가총액) 정보 추가 ② 변동성·위험 정보 추가 — 각각 새 모델로 학습해 비교",
+        "label": "정보 추가",
+        "plan": "후보 2건 비교: 기업 규모 변수 추가 재학습 / 변동성·위험 변수 추가 재학습",
         "candidates": [
             {"tag": "M", "change": "기업 규모 변수 추가", "kind": "model", "patch": {"model_spec": {"add_groups": ["size"]}}},
             {"tag": "M", "change": "변동성·위험 변수 추가", "kind": "model", "patch": {"model_spec": {"add_groups": ["risk"]}}},
         ]},
     "algorithm": {
         "label": "모델 알고리즘 비교",
-        "plan": "같은 데이터·Target 으로 Ridge 와 LightGBM 을 각각 학습해 비교",
+        "plan": "동일 데이터·예측 대상 기준 Ridge와 LightGBM 학습 결과 비교",
         "candidates": [
-            {"tag": "M", "change": "LightGBM 으로 학습", "kind": "model", "patch": {"model_spec": {"algorithm": "lightgbm"}}},
-            {"tag": "M", "change": "Ridge 로 학습", "kind": "model", "patch": {"model_spec": {"algorithm": "ridge"}}},
+            {"tag": "M", "change": "LightGBM 학습", "kind": "model", "patch": {"model_spec": {"algorithm": "lightgbm"}}},
+            {"tag": "M", "change": "Ridge 학습", "kind": "model", "patch": {"model_spec": {"algorithm": "ridge"}}},
         ]},
 }
 
@@ -224,7 +224,7 @@ def optimize(base_spec: dict, request: str, log=None, custom: list | None = None
             continue
         if r["run_id"] in seen:
             rows.append({"version": f"V{i + 2}", "change": c["change"], "kind": c["kind"],
-                         "error": "기존 명세와 동일하여 새 후보가 아닙니다(이미 반영된 설정)."})
+                         "error": "기존 설정과 동일하여 후보에서 제외"})
             continue
         seen.add(r["run_id"])
         rows.append(row(r, c["change"], c["kind"], f"V{i + 2}"))
@@ -241,5 +241,5 @@ def optimize(base_spec: dict, request: str, log=None, custom: list | None = None
     return {"request": request, "label": imp["label"], "plan": imp["plan"], "base_run_id": base["run_id"],
             "candidates": rows, "selected_on_development": best["version"], "tradeoffs": notes,
             "weights": base["spec"]["objective"]["weights"],
-            "selection_rule": "개발 검증 구간의 목적함수 J 가 가장 높은 후보를 표시합니다. 잠금 평가 구간 수치는 선택에 쓰지 않고 선택 후 확인용으로만 보여줍니다.",
-            "note": "개선 후보가 기존보다 좋다는 보장은 없습니다. 나빠진 결과도 그대로 기록합니다."}
+            "selection_rule": "검증 구간 목적함수 J 최상위 후보 표시. 최종 평가 구간 수치는 후보 선정에 미사용",
+            "note": "후보가 기존 대비 개선된다는 보장 없음. 악화된 결과도 동일하게 기록"}
