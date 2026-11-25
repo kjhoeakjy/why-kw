@@ -9,7 +9,7 @@
   const cache = new Map();
   const S = {
     mode: null, tab: 'create', busy: null, logs: [],
-    spec: { groups: ['price', 'volume'], h: 5, algo: 'ridge', k: 5, buf: 1, vf: 0, mf: false, cash: 1000000, preset: 'balanced' },
+    spec: { groups: ['price', 'volume'], h: 5, algo: 'ridge', k: 5, buf: 1, vf: 0, mf: false, cash: 1000000, preset: 'balanced', x: [], xv: {}, rules: [] },
     planNote: null, cur: null, versions: [], opt: null, forked: null, cashDemo: null,
   };
 
@@ -139,7 +139,7 @@
   const chartLeave = el => { $('.cross', el).style.display = 'none'; $('.tip', el).style.display = 'none'; };
 
   /* ---------- 화면 조각 ---------- */
-  const header = () => `<header class="top">${S.mode ? '<button class="back" data-act="home" aria-label="처음으로">‹</button>' : ''}<h1>나만의 AI를 키움</h1></header>`;
+  const header = () => `<header class="top">${S.mode ? '<button class="back" data-act="home" aria-label="처음으로">‹</button>' : ''}<h1 data-act="home">나만의 AI를 키움</h1></header>`;
   const ICON = {
     home: '<svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg>',
     set: '<svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>',
@@ -155,71 +155,121 @@
 
   function landing() {
     const f = S.forked;
-    return `${header()}
+    return `${header()}<div class="land">
       <div class="intro"><h2>개인 투자 기준 학습 AI</h2>
         <p class="sub">계좌 개설 전 체험 가능</p></div>
       ${f ? recipeCard(f.spec, '<button class="btn small" data-act="fork">설정 복제 후 수정</button>', '공유받은 설정') : ''}
-      <div class="card"><h3>이용 순서</h3>
+      <div class="card steps"><h3>이용 순서</h3>
         <div class="kv"><span>01 투자 기준 선택</span><span>중시 정보, 보유 기간, 운용 방식</span></div>
         <div class="kv"><span>02 AI 학습·검증</span><span>실제 과거 시세, 거래 비용 반영</span></div>
         <div class="kv"><span>03 AI 개선</span><span>후보 비교, 채택 판정</span></div>
         </div>
-      <div class="card"><button class="btn" data-act="acct">키움증권 계좌로 시작</button>
+      <div class="card start"><button class="btn" data-act="acct">키움증권 계좌로 시작</button>
         <p class="sub" style="margin:8px 2px 16px">보유 자산 반영, 거래 내역 학습, 자동 주문, 운용 보고서</p>
         <button class="btn ghost" data-act="mode" data-v="my">${S.cur ? '나의 AI 조회' : '계좌 없이 시작'}</button>
         <p class="sub" style="margin:8px 2px 0">AI 학습, 과거 데이터 검증, 설정 공유</p>
         ${S.acct ? `<div class="note" style="margin-top:14px"><b>계좌 연결 후 제공 기능</b><br>보유 종목·현금 기준 AI 학습<br>나의 거래 내역 기반 학습<br>자동 매수·매도(주문 한도, 주문 전 승인)<br>주간·월간 운용 보고서<br><span class="muted">시연 화면은 계좌 연결 미지원. 계좌 없이 시작으로 체험 가능</span></div>` : ''}</div>
-      <details class="card"><summary>서비스 안내</summary>
+      <details class="card info" ${window.matchMedia('(min-width:1000px)').matches ? 'open' : ''}><summary>서비스 안내</summary>
+        <div class="kv"><span>설정 항목</span><span>${N_REAL + N_X}개(시연 계산 반영 ${N_REAL}개, 설계안 ${N_X}개), 규칙 직접 입력</span></div>
         <div class="kv"><span>검증 방식</span><span>실제 과거 시세, 거래 비용 반영</span></div>
         <div class="kv"><span>사용 데이터</span><span>국내주식 일봉 ${CAT.data.start.slice(0, 4)}~${CAT.data.end.slice(0, 7)}</span></div>
         <div class="kv"><span>이용 조건</span><span>계좌 개설 불필요, 주문 미연결</span></div>
-        <div class="kv"><span>시연 범위</span><span>${LIVE ? '요청 시 서버 학습' : `사전 학습·검증 결과 ${CAT.index.runs.toLocaleString()}건 조회`}</span></div></details>
+        <div class="kv"><span>시연 범위</span><span>${LIVE ? '요청 시 서버 학습' : `사전 학습·검증 결과 ${CAT.index.runs.toLocaleString()}건 조회`}</span></div></details></div>
       ${disclosures()}`;
   }
 
+  /* ---------- 설정 항목 ----------
+     real: 시연 엔진이 실제로 계산에 반영하는 항목. 그 외는 설계안(선택 내용 기록, 시연 계산 미반영). */
+  const R = (act, k, v, l, o = {}) => ({ real: 1, act, k, v, l, b: 1, ...o });
+  const X = (id, l, o = {}) => ({ id, l, ...o });
+  const L = (rg, l) => ({ real: 1, act: 'lock', rg, l });
+  const SEC = [
+    { id: 'data', l: '데이터', d: 'AI가 학습할 자료', g: [
+      { t: '시세·거래', items: [R('grp', '', 'price', '가격 흐름(필수)'), R('grp', '', 'volume', '거래량'), R('grp', '', 'risk', '하락 위험'), R('grp', '', 'size', '기업 규모'), X('limit', '상·하한가 이력'), X('minute', '1분 단위 시세'), X('pre', '장 시작 전 예상 체결'), X('nxt', '대체거래소·시간외 시세')] },
+      { t: '수급', items: [X('frg', '외국인 순매수', { b: 1 }), X('inst', '기관 순매수', { b: 1 }), X('indiv', '개인 순매수'), X('prog', '프로그램 매매'), X('short', '공매도·대차 잔고')] },
+      { t: '기업 정보', items: [X('fin', '실적·재무', { b: 1 }), X('div', '배당', { b: 1 }), X('rep', '애널리스트 보고서', { b: 1 }), X('dart', '공시')] },
+      { t: '뉴스·비정형 자료', items: [X('newsT', '뉴스 제목', { b: 1 }), X('newsB', '뉴스 본문'), X('board', '종목토론방 게시글'), X('llm', '언어 모형 판독 점수'), X('search', '검색량·소셜 미디어 언급량')] },
+      { t: '업종·테마', items: [X('sector', '업종 동향', { b: 1 }), X('theme', '테마 동향'), X('rank', '거래 상위 종목 출현 횟수')] },
+      { t: '시장·해외', items: [X('kidx', '코스피·코스닥 지수'), X('us', '미국 지수(전일 밤)', { b: 1 }), X('fx', '환율'), X('breadth', '상승·하락 종목 비율'), X('rate', '금리·원자재')] },
+      { t: '제도·일정', items: [X('alert', '시장경보·거래정지·관리종목'), X('ipo', '신규 상장 경과일'), X('cal', '옵션 만기일·요일')] },
+      { t: '나의 자료', items: [X('hold', '보유 종목·현금', { acct: 1 }), X('trades', '나의 거래 내역', { acct: 1 }), X('watch', '관심 종목'), X('file', '직접 등록 자료(파일)')] },
+    ] },
+    { id: 'model', l: '모델', d: '학습 방식과 예측 대상', g: [
+      { t: '학습 방식', items: [R('set', 'algo', 'ridge', '선형 회귀(Ridge)'), R('set', 'algo', 'lightgbm', '트리 기반(LightGBM)'), X('gru', '순환 신경망(GRU)'), X('tabpfn', '사전 학습 표 모형(TabPFN)'), X('mlp', '다층 신경망(MLP)'), X('ens', '복수 모형 결합')] },
+      { t: '예측 대상', items: [R('set', 'h', 5, '약 1주 수익률'), R('set', 'h', 20, '약 1개월 수익률'), X('d1', '다음 거래일 수익률'), X('gap', '다음 거래일 시가 변동'), X('prob', '상승 확률')] },
+      { t: '보조 모형', items: [X('calib', '예측 확률 보정'), X('meta', '매수 여부 재판정(메타 라벨링)'), X('rerank', '상위 후보 재순위'), X('llmread', '뉴스·공시 판독(언어 모형)')] },
+      { t: '학습 구간', items: [L('win', '직전 4년'), X('w2', '직전 2년', { rg: 'win' }), X('wall', '전체 기간', { rg: 'win' })] },
+      { t: '재학습 주기', items: [L('freq', '연 1회'), X('fm', '월 1회', { rg: 'freq' }), X('fw', '주 1회', { rg: 'freq' })] },
+      { t: '우선 목표', items: Object.keys(PRESET).map(k => R('set', 'preset', k, PRESET[k])), n: '개선 후보 비교 시 우선순위 기준' },
+    ] },
+    { id: 'op', l: '운용', d: '종목 선정과 매매 방식', g: [
+      { t: '보유 기간', basic: 1, items: [R('set', 'h', 5, '단기(약 1주)'), R('set', 'h', 20, '중기(약 1개월)')], hideAdv: 1 },
+      { t: '종목 수', items: [R('set', 'k', 5, '집중(5종목)'), R('set', 'k', 10, '분산(10종목)'), X('kn', '직접 입력', { num: { def: 7, unit: '종목', min: 1, max: 50 } })] },
+      { t: '교체 방식', items: [R('set', 'buf', 1, '정기 교체'), R('set', 'buf', 3, '보유 유지 우선')] },
+      { t: '비중 배분', items: [L('wt', '동일 비중'), X('wscore', '점수 비례', { rg: 'wt' }), X('wvol', '변동성 역비례', { rg: 'wt' })] },
+      { t: '체결 시점', items: [L('ex', '익일 시가'), X('exclose', '당일 종가', { rg: 'ex' }), X('exsplit', '장중 분할 체결', { rg: 'ex' })] },
+      { t: '대상 종목', items: [L('uni', '거래대금 상위 300종목'), X('u200', '코스피200 한정', { rg: 'uni' }), X('usec', '관심 업종 한정', { rg: 'uni' }), X('uwatch', '관심 종목 한정', { rg: 'uni' }), X('uetf', '상장지수펀드(ETF) 포함')] },
+      { t: '가상 투자금', basic: 1, items: [R('set', 'cash', 1000000, '100만 원'), R('set', 'cash', 10000000, '1,000만 원'), X('cashacct', '계좌 잔고 기준', { acct: 1 })] },
+    ] },
+    { id: 'risk', l: '위험 관리', d: '손실 한도와 회피 조건', g: [
+      { t: '회피 조건', items: [R('tog', 'vf', '', '변동성 큰 종목 제외'), R('tog', 'mf', '', '하락장 신규 매수 중단'), X('noalert', '시장경보 종목 제외'), X('nonew', '신규 상장 종목 제외')] },
+      { t: '손실·이익 기준', items: [X('stop', '손절 기준', { num: { def: 5, unit: '%', min: 1, max: 50 } }), X('take', '이익 실현 기준', { num: { def: 10, unit: '%', min: 1, max: 100 } }), X('daily', '일일 손실 한도', { num: { def: 8, unit: '%', min: 1, max: 30 } }), X('floor', '원금 보호선', { num: { def: 50, unit: '%', min: 10, max: 100 } })] },
+      { t: '편중 제한', items: [X('wcap', '종목당 비중 상한', { num: { def: 20, unit: '%', min: 1, max: 100 } }), X('scap', '업종당 비중 상한', { num: { def: 40, unit: '%', min: 1, max: 100 } })] },
+      { t: '주문 통제', items: [X('approve', '주문 전 본인 승인', { acct: 1 }), X('olimit', '일일 주문 한도', { acct: 1 }), X('pause', '손실 한도 도달 시 운용 중단', { acct: 1 })] },
+    ] },
+    { id: 'mine', l: '나의 전략', d: '직접 입력하는 규칙', g: [] },
+  ];
+  const XI = {};
+  SEC.forEach(sc => sc.g.forEach(g => g.items.forEach(i => { if (!i.real) XI[i.id] = { ...i, sec: sc.id, t: g.t }; })));
+  const N_REAL = SEC.flatMap(sc => sc.g).filter(g => !g.hideAdv).flatMap(g => g.items).filter(i => i.real && i.act !== 'lock').length, N_X = Object.keys(XI).length;
+  const xNames = s => (s.x || []).filter(id => XI[id]).map(id => XI[id].l + (XI[id].num ? ' ' + ((s.xv || {})[id] ?? XI[id].num.def) + XI[id].num.unit : ''));
+
+  function itemChip(i, s) {
+    if (i.real) {
+      if (i.act === 'grp') return `<button class="chip" data-act="grp" data-v="${i.v}" aria-pressed="${s.groups.includes(i.v)}" ${i.v === 'price' ? 'data-lock="1"' : ''}>${i.l}</button>`;
+      if (i.act === 'tog') return `<button class="chip" data-act="tog" data-k="${i.k}" aria-pressed="${i.k === 'vf' ? s.vf > 0 : !!s.mf}">${i.l}</button>`;
+      if (i.act === 'lock') return `<button class="chip" data-act="xclr" data-v="${i.rg}" aria-pressed="${!(s.x || []).some(id => XI[id] && XI[id].rg === i.rg)}">${i.l}</button>`;
+      const on = i.k === 'buf' ? (i.v > 1 ? s.buf > 1 : s.buf === 1) : String(s[i.k]) === String(i.v);
+      return `<button class="chip" data-act="set" data-k="${i.k}" data-v="${i.v}" aria-pressed="${on}">${i.l}</button>`;
+    }
+    const on = (s.x || []).includes(i.id);
+    const num = i.num && on ? `<span class="num"><input type="number" inputmode="numeric" data-xv="${i.id}" min="${i.num.min}" max="${i.num.max}" value="${(s.xv || {})[i.id] ?? i.num.def}" aria-label="${i.l}">${i.num.unit}</span>` : '';
+    return `<button class="chip x" data-act="x" data-v="${i.id}" aria-pressed="${on}">${i.l}${i.acct ? '<i>계좌</i>' : ''}</button>${num}`;
+  }
+  const groupCard = (g, s, basic) => {
+    const items = basic ? g.items.filter(i => i.b) : g.items;
+    return items.length ? `<div class="card grp"><h3>${g.t}</h3><div class="chips">${items.map(i => itemChip(i, s)).join('')}</div>${g.n ? `<p class="muted">${g.n}</p>` : ''}</div>` : '';
+  };
+  const ruleCard = s => `<div class="card grp wide"><h3>나의 규칙 입력</h3>
+      <textarea id="nl" placeholder="예: 외국인 5일 연속 순매수 종목 우선, 실적 발표 전날 신규 매수 중단, 손절 7%"></textarea>
+      <button class="btn ghost small" data-act="nl">규칙 추가</button>
+      ${S.planNote ? `<div class="note">${S.planNote}</div>` : ''}
+      ${(s.rules || []).length ? `<div class="rules">${s.rules.map((r, i) => `<div class="kv"><span>${esc(r)}</span><button class="del" data-act="rdel" data-v="${i}" aria-label="규칙 삭제">삭제</button></div>`).join('')}</div>` : ''}
+      <p class="muted">문장 입력 가능. 시연 화면은 일부 조건 자동 반영, 그 외 문장은 기록 처리</p></div>`;
+
   function createMy() {
-    const s = S.spec, on = g => s.groups.includes(g);
-    const chip = (g, l) => `<button class="chip" data-act="grp" data-v="${g}" aria-pressed="${on(g)}" ${g === 'price' ? 'data-lock="1"' : ''}>${l}</button>`;
-    const adv = !!S.adv;
-    return `<h2>투자 기준 설정</h2>
-      <div class="seg"><button data-act="lvl" data-v="0" aria-pressed="${!adv}">일반</button><button data-act="lvl" data-v="1" aria-pressed="${adv}">고급</button></div>
-      <p class="sub" style="margin:8px 4px 14px">${adv ? '운용 방식, 회피 조건, 우선 목표 직접 설정' : '핵심 항목 3가지 선택'}</p>
-      <div class="card"><h3>중시하는 정보</h3>
-        <div class="chips">${chip('price', '가격 흐름(필수)')}${chip('volume', '거래량')}${chip('risk', '하락 위험')}${chip('size', '기업 규모')}
-          <button class="chip" disabled title="자료 미확보">기업 실적</button><button class="chip" disabled>배당</button><button class="chip" disabled>수급</button></div>
-        <p class="muted">기업 실적·배당·수급은 제공 준비 중</p>
-        </div><div class="card"><h3>보유 기간</h3>
-        <div class="chips"><button class="chip" data-act="set" data-k="h" data-v="5" aria-pressed="${s.h === 5}">단기(약 1주)</button>
-          <button class="chip" data-act="set" data-k="h" data-v="20" aria-pressed="${s.h === 20}">중기(약 1개월)</button></div>
-        </div>${adv ? `<div class="card"><h3>학습 방식</h3>
-        <div class="chips"><button class="chip" data-act="set" data-k="algo" data-v="ridge" aria-pressed="${s.algo === 'ridge'}">선형 회귀(Ridge)</button>
-          <button class="chip" data-act="set" data-k="algo" data-v="lightgbm" aria-pressed="${s.algo === 'lightgbm'}">트리 기반(LightGBM)</button></div>
-        </div><div class="card"><h3>분산 정도</h3>
-        <div class="chips"><button class="chip" data-act="set" data-k="k" data-v="5" aria-pressed="${s.k === 5}">집중(5종목)</button>
-          <button class="chip" data-act="set" data-k="k" data-v="10" aria-pressed="${s.k === 10}">분산(10종목)</button></div>
-        </div><div class="card"><h3>교체 방식</h3>
-        <div class="chips"><button class="chip" data-act="set" data-k="buf" data-v="1" aria-pressed="${s.buf === 1}">정기 교체</button>
-          <button class="chip" data-act="set" data-k="buf" data-v="3" aria-pressed="${s.buf > 1}">보유 유지 우선</button></div>
-        </div><div class="card"><h3>회피 조건(선택)</h3>
-        <div class="chips"><button class="chip" data-act="tog" data-k="vf" aria-pressed="${s.vf > 0}">변동성 큰 종목 제외</button>
-          <button class="chip" data-act="tog" data-k="mf" aria-pressed="${!!s.mf}">하락장 신규 매수 중단</button></div>
-        </div><div class="card"><h3>우선 목표</h3>
-        <div class="chips">${Object.keys(PRESET).map(k => `<button class="chip" data-act="set" data-k="preset" data-v="${k}" aria-pressed="${s.preset === k}">${PRESET[k]}</button>`).join('')}</div>
-        <p class="muted">개선 후보 비교 시 우선순위 기준으로 사용</p>
-        </div>` : ''}<div class="card"><h3>가상 투자금</h3>
-        <div class="chips"><button class="chip" data-act="set" data-k="cash" data-v="1000000" aria-pressed="${s.cash === 1e6}">100만 원</button>
-          <button class="chip" data-act="set" data-k="cash" data-v="10000000" aria-pressed="${s.cash === 1e7}">1,000만 원</button></div>
-        </div><div class="card"><h3>추가 요청(선택)</h3>
-        <textarea id="nl" placeholder="예: 변동성 큰 종목 제외, 거래 횟수 축소"></textarea>
-        <button class="btn ghost small" data-act="nl">입력 내용 반영</button>
-        ${S.planNote ? `<div class="note">${S.planNote}</div>` : ''}</div>
-      ${adv ? `<div class="card"><h3>나의 전략 반영 <span class="badge">준비 중</span></h3>
-        <div class="kv"><span>관심 업종·종목 범위</span><span>대상 종목 직접 지정</span></div>
-        <div class="kv"><span>나의 매매 규칙</span><span>매수·매도 조건 직접 입력</span></div>
-        <div class="kv"><span>나의 거래 내역</span><span>키움증권 계좌 거래 기록 학습</span></div>
-        <p class="muted">계좌 개설 고객 대상 제공 예정(설계안)</p></div>` : ''}
-      ${planCard()}
-      <div class="cta"><button class="btn" data-act="run">${S.cur ? '변경 기준 재학습' : 'AI 학습 시작'}</button></div>`;
+    const s = S.spec, adv = !!S.adv, sec = SEC.find(x => x.id === (S.sec || 'data')) || SEC[0];
+    const legend = `<p class="lg"><span><b class="dot on"></b>시연 계산 반영</span><span><b class="dot"></b>설계안(선택 내용 기록, 시연 계산 미반영)</span></p>`;
+    let main;
+    if (!adv) {
+      const info = SEC[0].g.flatMap(g => g.items.filter(i => i.b));
+      main = `<div class="gg"><div class="card grp wide"><h3>중시하는 정보</h3><div class="chips">${info.map(i => itemChip(i, s)).join('')}</div></div>
+        ${groupCard(SEC[2].g[0], s)}${groupCard(SEC[2].g[6], s, true)}${ruleCard(s)}</div>`;
+    } else if (sec.id === 'mine') {
+      main = `<div class="gg">${ruleCard(s)}
+        <div class="card grp wide"><h3>키움증권 계좌 연계 항목 <span class="badge">설계안</span></h3>
+        <div class="kv"><span>보유 종목·현금</span><span>실제 자산 기준 학습·검증</span></div>
+        <div class="kv"><span>나의 거래 내역</span><span>본인 매매 기록 기반 학습</span></div>
+        <div class="kv"><span>자동 주문</span><span>주문 한도, 주문 전 승인</span></div>
+        <div class="kv"><span>운용 보고서</span><span>주간·월간 성과, 개선 제안</span></div>
+        <p class="muted">계좌 개설 고객 대상, 준법 검토 전제</p></div></div>`;
+    } else main = `<div class="gg">${sec.g.filter(g => !g.hideAdv).map(g => groupCard(g, s)).join('')}</div>`;
+    const cnt = id => (s.x || []).filter(x => XI[x] && XI[x].sec === id).length + (id === 'mine' ? (s.rules || []).length : 0);
+    const nav = adv ? `<div class="secnav">${SEC.map(x => `<button data-act="sec" data-v="${x.id}" aria-current="${x.id === sec.id}"><b>${x.l}</b><span>${x.d}</span>${cnt(x.id) ? `<em>${cnt(x.id)}</em>` : ''}</button>`).join('')}</div>` : '';
+    return `<div class="sethead"><div><h2>투자 기준 설정</h2><p class="sub">${adv ? '데이터, 모델, 운용, 위험 관리, 나의 전략 직접 구성' : '핵심 항목 선택'}</p></div>
+      <div class="seg"><button data-act="lvl" data-v="0" aria-pressed="${!adv}">일반</button><button data-act="lvl" data-v="1" aria-pressed="${adv}">고급</button></div></div>
+      <div class="setwrap ${adv ? 'adv' : 'basic'}">${nav}<div class="setmain">${legend}${main}</div>
+      <div class="side">${planCard()}<div class="cta"><button class="btn" data-act="run">${S.cur ? '변경 기준 재학습' : 'AI 학습 시작'}</button></div></div></div>`;
   }
   const planCard = () => {
     const s = S.spec;
@@ -231,6 +281,10 @@
       <div class="kv"><span>우선 목표</span><span>${PRESET[s.preset || 'balanced']}</span></div>
       <div class="kv"><span>검증 기간</span><span>${CAT.periods.development[0].slice(0, 4)}~${CAT.periods.development[1].slice(0, 4)}년</span></div>
       <div class="kv"><span>거래 비용</span><span>수수료·세금·슬리피지 반영</span></div>
+      ${xNames(s).length || (s.rules || []).length ? `<h3 style="margin-top:18px">설계안 선택 항목 <span class="badge">${xNames(s).length + (s.rules || []).length}개</span></h3>
+      ${SEC.map(sc => { const n = (s.x || []).filter(id => XI[id] && XI[id].sec === sc.id); return n.length ? `<div class="kv"><span>${sc.l}</span><span>${xNames({ ...s, x: n }).join(', ')}</span></div>` : ''; }).join('')}
+      ${(s.rules || []).length ? `<div class="kv"><span>나의 규칙</span><span>${s.rules.length}건</span></div>` : ''}
+      <p class="muted">설계안 항목은 선택 내용 기록 대상이며 시연 계산 미반영</p>` : ''}
       ${S.adv ? `<div class="kv"><span>학습 방식</span><span>${s.algo === 'ridge' ? '선형 회귀(Ridge)' : '트리 기반(LightGBM)'}, 연 단위 전진 분석</span></div>
       <div class="kv"><span>학습 구간</span><span>검증 연도 직전 4년</span></div>
       <div class="kv"><span>체결 기준</span><span>결정일 익일 시가(일봉)</span></div>
@@ -314,7 +368,7 @@
     const head = S.mode === 'qs' ? `<h2>${ver ? ver.name + ' · ' : ''}검증 결과</h2>
       <p class="sub">${describe(r.s).map(esc).join(' · ')}</p><p>${srcBadge(r)} <span class="badge">모델 ${r.model_id}</span> <span class="badge">정책 ${r.policy_id}</span></p>`
       : `<h2>${esc(aiTitle(r.s))} ${ver ? ver.name : ''}</h2>
-      <p class="sub">${r.s.groups.map(g => SHORT[g]).join('·')} 정보 · ${horizonLabel(r.s.h)} · ${r.s.buf > 1 ? '낮은 거래 빈도' : '정기 교체'}${r.s.mf ? ' · 하락장 신규 매수 중단' : ''}</p>`;
+      <p class="sub">${r.s.groups.map(g => SHORT[g]).join('·')} 정보 · ${horizonLabel(r.s.h)} · ${r.s.buf > 1 ? '낮은 거래 빈도' : '정기 교체'}${r.s.mf ? ' · 하락장 신규 매수 중단' : ''}${(r.s.x || []).length + (r.s.rules || []).length ? ` · 설계안 항목 ${(r.s.x || []).length + (r.s.rules || []).length}개 기록(계산 미반영)` : ''}</p>`;
     const verdictNote = bv ? `<p class="sub">${d.cagr >= 0 ? '원금 대비 수익 발생' : bv.cagr < d.cagr ? '기존 모델 대비 손실 폭 감소, 원금 손실 발생' : '원금 손실 발생'}</p>` : `<p class="sub">${d.cagr >= 0 ? '원금 대비 수익 발생' : '원금 손실 발생'}</p>`;
     const ck = staticKey(r.s), cr = COST && ck ? COST[`${ck.m}__${ck.p}`] : null;
     const costCard = cr ? `<div class="card"><h3>거래 비용 가정별 결과</h3><p class="sub">동일 예측 모델, 비용 가정 변경 시 ${Y0}~${Y1}년 성과</p>
@@ -325,10 +379,10 @@
         <p class="muted">기본 가정: 수수료 0.015%, 매도 시 거래세 0.20%, 슬리피지 편도 0.10%. 슬리피지 3배: 편도 0.30%</p></div>` : '';
     const led = qs ? r.ledger_tail : r.ledger_tail.filter(l => l.side !== '매수불가');
     const askCard = `<div class="card" data-keep="1"><h3>AI 개선</h3>${['reduce_loss', 'less_trading', 'more_data'].map(k => `<button class="rowbtn" data-act="opt" data-v="${k}"><span>${CAT.improvements[k].label}</span><i>›</i></button>`).join('')}</div>`;
-    return `${head}
-      <div class="card" data-keep="1">${perSel}<p class="sub">${d.from.slice(0, 4)}${d.from.slice(0, 4) === d.to.slice(0, 4) ? '' : '~' + d.to.slice(0, 4)}년 과거 검증 · ${man(d.start_value)} 투자 가정</p>
-        <div class="hero ${cls(d.total_return)}">${won(d.end_value)} <small>${pct(d.total_return)} · 연 ${pct(d.cagr)}</small></div>${verdictNote}
-        ${chart}
+    return `${head}<div class="cols">
+      <div class="card span herocard" data-keep="1"><div class="ha">${perSel}<p class="sub">${d.from.slice(0, 4)}${d.from.slice(0, 4) === d.to.slice(0, 4) ? '' : '~' + d.to.slice(0, 4)}년 과거 검증 · ${man(d.start_value)} 투자 가정</p>
+        <div class="hero ${cls(d.total_return)}">${won(d.end_value)} <small>${pct(d.total_return)} · 연 ${pct(d.cagr)}</small></div>${verdictNote}</div>
+        <div class="hc">${chart}</div>
         <div class="tiles">
           <div class="tile"><div class="k">최대 낙폭</div><div class="v down">${pct(d.mdd)}</div><div class="n">${d.mdd_peak.slice(2, 7).replace('-', '.')}~${d.mdd_trough.slice(2, 7).replace('-', '.')}${d.custom ? '' : d.mdd_recovered ? ' · 회복 ' + d.mdd_recovered.slice(2, 7).replace('-', '.') : ' · 미회복'}</div></div>
           <div class="tile"><div class="k">거래 횟수</div><div class="v">연 ${Math.round(d.trades_per_year)}회</div><div class="n">수수료·세금 ${won(d.explicit_cost_krw)}</div></div>
@@ -369,7 +423,7 @@
         <p class="muted">연구 기준일 ${CAT.data.end} 이전의 과거 가상 거래 기록이며 현재 시점의 추천이 아님. ${esc(r.ledger_summary.cost_assumption)}</p></details>
       ${qs ? '' : '<!--'}<details class="card"><summary>실행 기록·재현 정보</summary><div class="log">${[...(r.model.training_log || []), ...r.logs].map(esc).join('\n')}</div>
         <p class="muted">run ${r.run_id} · engine ${r.engine_version} · snapshot ${CAT.data.snapshot_id} · seed 42</p></details>${qs ? '' : '-->'}
-      ${custom ? '<p class="muted" style="margin:0 4px">선택 기간의 최대 낙폭은 주간 평가금액 기준 산출</p>' : ''}
+      </div>${custom ? '<p class="muted" style="margin:0 4px">선택 기간의 최대 낙폭은 주간 평가금액 기준 산출</p>' : ''}
       ${disclosures()}`;
   }
 
@@ -410,14 +464,14 @@
       ${S.opt.rows.filter(x => x.error).map(x => `<div class="kv"><span>${esc(cname(x.change))}</span><span>반영 완료</span></div>`).join('')}</div>`;
     return `<h2>AI 개선</h2>
       <p class="sub">개선 방향 선택 시 실제 데이터 기준 후보 비교</p>
-      <div class="card"><h3>개선 방향</h3>${btns}</div>${res}
+      <div class="cols"><div class="card"><h3>개선 방향</h3>${btns}</div>${res}
       <div class="card"><h3>투자금 변경</h3><p class="sub">${qs ? '예측 모델 유지, 포트폴리오 재계산(재학습 없음)' : '동일 AI 기준 투자금별 결과 비교'}</p>
         <button class="btn ghost small" data-act="cash">${S.cur.s.cash === 1e6 ? '투자금 1,000만 원 기준 계산' : '투자금 100만 원 기준 계산'}</button>
         ${cd ? `${qs ? `<div class="kv"><span>모델</span><span>${cd.a.model_id} = ${cd.b.model_id} (동일)</span></div>` : ''}
           <div class="kv"><span>연 수익률</span><span>${man(cd.a.s.cash)} ${pct(cd.a.metrics.development.cagr)} / ${man(cd.b.s.cash)} ${pct(cd.b.metrics.development.cagr)}</span></div>
           <div class="kv"><span>투자금 부족 매수 불가</span><span>${cd.a.ledger_summary.skipped.unaffordable}건 / ${cd.b.ledger_summary.skipped.unaffordable}건</span></div>
           <div class="kv"><span>연 거래 횟수</span><span>${Math.round(cd.a.metrics.development.trades_per_year)} / ${Math.round(cd.b.metrics.development.trades_per_year)}</span></div>
-          <p class="muted">예측값 동일 시에도 투자금에 따라 매수 가능 종목과 성과 상이. 키움증권 계좌 연결 시 실제 보유 종목·현금 기준 산정(본 시연은 실계좌 미연결)</p>` : ''}</div>`;
+          <p class="muted">예측값 동일 시에도 투자금에 따라 매수 가능 종목과 성과 상이. 키움증권 계좌 연결 시 실제 보유 종목·현금 기준 산정(본 시연은 실계좌 미연결)</p>` : ''}</div></div>`;
   }
 
   function compareChart(items) {
@@ -432,7 +486,7 @@
   function versionsView() {
     if (!S.versions.length) return validateView();
     const url = shareUrl();
-    return `<h2>${S.mode === 'qs' ? '모델 버전' : '버전 기록'}</h2>
+    return `<h2>${S.mode === 'qs' ? '모델 버전' : '버전 기록'}</h2><div class="cols">
       ${S.versions.map((v, i) => { const d = v.run.metrics.development; return `<div class="card tight ${v.run.run_id === S.cur.run_id ? 'sel' : ''}">
         <div class="kv" style="border:0"><b>${v.name}${v.run.run_id === S.cur.run_id ? ' <span class="badge">사용 중</span>' : ''}</b><span>${v.kind === 'base' ? '<span class="badge">최초 학습</span>' : `<span class="badge ${v.retrained ? 'm' : 'p'}">${v.retrained ? '모델 재학습' : '운용 방식 변경'}</span>`}</span></div>
         <p class="sub">${esc(v.why)}</p>
@@ -449,12 +503,13 @@
         <div class="kv"><span>자동 주문</span><span>채택 가능 판정 AI, 한도 설정, 주문 전 승인</span></div>
         <div class="kv"><span>운용 보고서</span><span>주간·월간 성과, 거래 내역, 개선 제안</span></div>
         <button class="btn small" disabled>영웅문S# 이동</button>
-        <p class="muted">계좌 연계 기능은 설계안이며 준법 검토 전제. 시연 화면은 앱 연결·실계좌·주문 미지원</p></div>`;
+        <p class="muted">계좌 연계 기능은 설계안이며 준법 검토 전제. 시연 화면은 앱 연결·실계좌·주문 미지원</p></div></div>`;
   }
   const recipeCard = (s, action, label) => `<div class="card sel"><p class="muted">${label}</p><h3 style="font-size:16px">${esc(aiTitle(s))}</h3>
       <div class="kv"><span>반영 정보</span><span>${s.groups.map(g => SHORT[g]).join(' · ')}</span></div>
       <div class="kv"><span>보유 기간</span><span>${s.h}거래일(${s.h === 5 ? '약 1주' : '약 1개월'})</span></div>
       <div class="kv"><span>최적화 기준</span><span>${PRESET[s.preset || 'balanced']}</span></div>
+      ${(s.x || []).length + (s.rules || []).length ? `<div class="kv"><span>설계안 항목</span><span>${(s.x || []).length + (s.rules || []).length}개</span></div>` : ''}
       ${action}<p class="muted">공유 제외: 수익률, 종목, 개인 자산 정보</p></div>`;
   const shareUrl = () => location.origin + location.pathname + '#r=' + btoa(unescape(encodeURIComponent(JSON.stringify({ m: S.mode, s: S.cur ? S.cur.s : S.spec }))));
 
@@ -468,7 +523,7 @@
     app.innerHTML = body + (S.busy && S.mode === 'my' ? '' : tabs());
     if (S.mode === 'my' && S.tab === 'validate' && !S.busy) app.querySelectorAll('div.card:not([data-keep])').forEach(c => {
       const h = c.querySelector(':scope > h3'); if (!h) return;
-      const d = document.createElement('details'); d.className = 'card'; const sm = document.createElement('summary'); sm.textContent = h.textContent; h.remove(); d.appendChild(sm);
+      const d = document.createElement('details'); d.className = 'card'; d.open = window.matchMedia('(min-width:1000px)').matches; const sm = document.createElement('summary'); sm.textContent = h.textContent; h.remove(); d.appendChild(sm);
       while (c.firstChild) d.appendChild(c.firstChild); c.replaceWith(d);
     });
     const lg = $('#log'); if (lg) lg.scrollTop = lg.scrollHeight;
@@ -492,14 +547,15 @@
     for (const l of lines) { log(l); await sleep(LIVE ? 20 : 110); }
   }
   async function runCurrent() {
-    const s = { ...S.spec, groups: [...S.spec.groups] };
-    if (S.cur && sameSpec({ ...s, preset: S.cur.s.preset }, S.cur.s)) { const ch = s.preset !== S.cur.s.preset; S.cur.s.preset = s.preset; S.tab = 'validate'; render(); window.scrollTo(0, 0); return toast(ch ? '우선 목표 변경 반영' : '변경 사항 없음'); }
+    const s = { ...S.spec, groups: [...S.spec.groups], x: [...(S.spec.x || [])], xv: { ...(S.spec.xv || {}) }, rules: [...(S.spec.rules || [])] };
+    if (S.cur && sameSpec({ ...s, preset: S.cur.s.preset }, S.cur.s)) { const ch = s.preset !== S.cur.s.preset, xc = JSON.stringify([s.x, s.xv, s.rules]) !== JSON.stringify([S.cur.s.x, S.cur.s.xv, S.cur.s.rules]); S.cur.s.preset = s.preset; S.cur.s.x = [...s.x]; S.cur.s.xv = { ...s.xv }; S.cur.s.rules = [...s.rules]; S.tab = 'validate'; render(); window.scrollTo(0, 0); return toast(xc ? '설계안 항목 기록(시연 계산 미반영)' : ch ? '우선 목표 변경 반영' : '변경 사항 없음'); }
     const prev = S.cur ? S.versions : null;
     const r = await withBusy(S.mode === 'qs' ? '연구 실행 중' : '학습 중', async log => {
       log(`[설정] ${describe(s).join(' · ')}`);
       const run = await getRun(s); await replay(run, log); return run;
     });
     if (!r) return;
+    r.s = { ...r.s, x: s.x, xv: s.xv, rules: s.rules };
     S.cur = r; S.opt = null; S.cashDemo = null;
     const why = S.mode === 'qs' ? describe(s).slice(0, 3).join(' · ') : s.groups.map(g => SHORT[g]).join('·') + ' 정보 · ' + horizonLabel(s.h);
     S.versions = prev ? [...prev, { name: 'V' + (prev.length + 1), kind: 'model', retrained: true, why: '설정 변경: ' + why, run: r }] : [{ name: 'V1', kind: 'base', why: '최초 설정: ' + why, run: r }];
@@ -538,10 +594,15 @@
     if (/몇 ?주|한 ?달|장기|오래|길게|자주.*(어렵|어려|않|못|힘들)|바빠|바쁘|직장/.test(t)) { s.h = 20; notes.push('20거래일 기준'); }
     if (/자주.*(어렵|어려|않|못|힘들)|거래.*(줄|적게|축소|감소)|수수료/.test(t)) { s.buf = 3; notes.push('상위권 종목 보유 유지(거래 감소)'); }
     if (/하락장|시장.*(나쁠|떨어)/.test(t)) { s.mf = true; notes.push('하락장 신규 매수 중단'); }
-    const no = [];
-    if (/실적|재무|PER|PBR|배당|수급|외국인|기관|뉴스/i.test(t)) no.push('실적·배당·수급·뉴스 데이터 미지원');
+    const no = [], xs = [];
+    const ax = (re, id, val) => { if (re.test(t) && XI[id]) { if (!s.x.includes(id)) { if (XI[id].rg) s.x = s.x.filter(o => XI[o].rg !== XI[id].rg); s.x.push(id); } if (val) s.xv[id] = val; xs.push(XI[id].l); } };
+    const pc = (t.match(/(\d+(?:\.\d+)?) ?%/) || [])[1];
+    ax(/외국인/, 'frg'); ax(/기관/, 'inst'); ax(/실적|재무|PER|PBR/i, 'fin'); ax(/배당/, 'div'); ax(/보고서|애널|리포트|목표가/, 'rep'); ax(/공시/, 'dart');
+    ax(/뉴스|기사/, 'newsT'); ax(/토론방|게시글|커뮤니티/, 'board'); ax(/테마/, 'theme'); ax(/업종|섹터/, 'sector'); ax(/미국|나스닥|해외/, 'us'); ax(/환율/, 'fx');
+    ax(/손절/, 'stop', /손절/.test(t) && pc ? +pc : null); ax(/익절|이익 실현/, 'take', /익절|이익 실현/.test(t) && !/손절/.test(t) && pc ? +pc : null); ax(/종가/, 'exclose'); ax(/ETF|상장지수/i, 'uetf');
     if (/추천|뭐 ?사|사야|사도|살까|팔까|팔아|매수해|매도해|오를|될까/.test(t)) no.push('종목 추천·매수 권유 미제공(과거 데이터 연구로 한정)');
-    return (notes.length ? '<b>반영:</b> ' + notes.join(', ') : '반영 가능한 조건 없음') + (no.length ? '<br><b>미지원:</b> ' + no.join(' / ') : '') + '<br><span class="muted">규칙 기반 해석</span>';
+    if (!s.rules.includes(t.trim())) s.rules = [...s.rules, t.trim()].slice(-20);
+    return (notes.length ? '<b>시연 계산 반영:</b> ' + notes.join(', ') : '시연 계산 반영 조건 없음') + (xs.length ? '<br><b>설계안 항목 선택:</b> ' + xs.join(', ') : '') + '<br><b>규칙 기록:</b> 1건' + (no.length ? '<br><b>미지원:</b> ' + no.join(' / ') : '') + '<br><span class="muted">규칙 기반 해석</span>';
   }
   async function parseNl() {
     const t = ($('#nl') || {}).value || ''; if (!t.trim()) return toast('입력 내용 없음');
@@ -559,6 +620,7 @@
         }
       } catch (e) { /* 규칙 기반으로 대체 */ }
     }
+    S.spec.x = S.spec.x || []; S.spec.xv = S.spec.xv || {}; S.spec.rules = S.spec.rules || [];
     S.planNote = parseText(t); render();
   }
 
@@ -567,12 +629,16 @@
     const a = b.dataset.act, v = b.dataset.v, s = S.spec;
     if (a === 'home') { S.mode = null; S.tab = 'create'; }
     else if (a === 'mode') { if (S.last && S.last !== v) { S.store = S.store || {}; S.store[S.last] = { cur: S.cur, versions: S.versions, opt: S.opt, cashDemo: S.cashDemo, spec: S.spec }; Object.assign(S, S.store[v] || { cur: null, versions: [], opt: null, cashDemo: null, spec: { ...S.spec, groups: [...S.spec.groups] } }); } S.last = v; S.mode = v; S.tab = S.cur ? 'validate' : 'create'; window.scrollTo(0, 0); }
-    else if (a === 'fork') { S.spec = { ...S.spec, ...S.forked.spec }; S.mode = 'my'; S.forked = null; S.tab = 'create'; S.adv = S.spec.k !== 5 || S.spec.buf > 1 || S.spec.vf > 0 || !!S.spec.mf; toast('설정 복제 완료'); }
+    else if (a === 'fork') { S.spec = { ...S.spec, ...S.forked.spec }; S.spec.x = (S.spec.x || []).filter(o => XI[o]); S.spec.xv = S.spec.xv || {}; S.spec.rules = S.spec.rules || []; S.mode = 'my'; S.forked = null; S.tab = 'create'; S.adv = S.spec.k !== 5 || S.spec.buf > 1 || S.spec.vf > 0 || !!S.spec.mf; toast('설정 복제 완료'); }
     else if (a === 'tab') { S.tab = v; window.scrollTo(0, 0); }
     else if (a === 'grp') { if (b.dataset.lock) return toast('가격 흐름은 필수 항목'); const ng = s.groups.includes(v) ? s.groups.filter(g => g !== v) : [...s.groups, v]; if (!LIVE && !Object.values(CAT.feature_sets).some(f => [...f].sort().join() === [...ng].sort().join())) return toast('해당 조합은 준비 중'); s.groups = ng; }
     else if (a === 'set') { s[b.dataset.k] = b.dataset.k === 'preset' || b.dataset.k === 'algo' ? v : +v; }
     else if (a === 'acct') { S.acct = !S.acct; }
     else if (a === 'lvl') { S.adv = v === '1'; }
+    else if (a === 'sec') { S.sec = v; }
+    else if (a === 'x') { s.x = s.x || []; s.xv = s.xv || {}; const it = XI[v]; if (s.x.includes(v)) s.x = s.x.filter(o => o !== v); else { if (it.rg) s.x = s.x.filter(o => XI[o].rg !== it.rg); s.x.push(v); if (it.num && s.xv[v] == null) s.xv[v] = it.num.def; } }
+    else if (a === 'xclr') { s.x = (s.x || []).filter(o => XI[o].rg !== v); }
+    else if (a === 'rdel') { s.rules = s.rules.filter((_, i) => i !== +v); }
     else if (a === 'tog') { if (b.dataset.k === 'vf') s.vf = s.vf > 0 ? 0 : 0.3; else s.mf = !s.mf; }
     else if (a === 'nl') return parseNl();
     else if (a === 'run') return runCurrent();
@@ -594,6 +660,7 @@
   });
   app.addEventListener('change', ev => {
     const pe = ev.target.closest('[data-per]'); if (pe) { const Y0 = +CAT.periods.development[0].slice(0, 4), Y1 = +CAT.periods.development[1].slice(0, 4); S.period = { ...(S.period || { a: Y0, b: Y1 }), [pe.dataset.per]: +pe.value }; return render(); }
+    const xv = ev.target.closest('[data-xv]'); if (xv) { const n = XI[xv.dataset.xv].num, val = Math.max(n.min, Math.min(n.max, +xv.value || n.def)); S.spec.xv = { ...(S.spec.xv || {}), [xv.dataset.xv]: val }; return render(); }
     const el = ev.target.closest('[data-act="sel"]'); if (!el) return;
     const k = el.dataset.k, v = el.value;
     S.spec[k] = k === 'algo' || k === 'preset' ? v : k === 'mf' ? v === 'true' : +v; render();

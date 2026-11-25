@@ -167,3 +167,88 @@ details.disc li{margin:4px 0}details.disc ul{padding-left:16px;margin:6px 0}
 .per span{margin-right:auto;font-weight:600}
 .per select{width:auto;padding:8px 30px 8px 12px;font-size:13px;border-radius:10px}
 .per i{font-style:normal;color:var(--muted)}
+
+/* 설정 화면 */
+.sethead .seg{margin:8px 0 12px}
+.lg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--ink2);margin:10px 4px 4px}
+.lg span{display:inline-flex;align-items:center;gap:6px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--brand);background:var(--surface)}
+.dot.on{background:var(--brand)}
+.chip.x{background:var(--surface);box-shadow:inset 0 0 0 1px var(--axis);color:var(--ink2)}
+.chip.x[aria-pressed=true]{background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--brand);color:var(--brand);font-weight:600}
+.chip i{font-style:normal;font-size:10.5px;font-weight:600;color:var(--pink);margin-left:6px}
+.grp .chip{padding:8px 14px;min-height:38px;font-size:13.5px}
+.num{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--ink2)}
+.num input{width:64px;font:inherit;font-size:13.5px;padding:8px 8px;border-radius:10px;border:0;background:var(--surface2);text-align:right;outline:0}
+.secnav{display:flex;gap:8px;overflow-x:auto;margin:0 -16px 4px;padding:4px 16px 8px;position:sticky;top:52px;background:var(--page);z-index:4;scrollbar-width:none}
+.secnav::-webkit-scrollbar{display:none}
+.secnav button{flex:none;border:0;background:var(--surface);color:var(--ink2);border-radius:999px;padding:9px 14px;font:inherit;font-size:13.5px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.secnav button b{font-weight:600}
+.secnav button span{display:none}
+.secnav button em{font-style:normal;font-size:11px;font-weight:700;color:var(--pink)}
+.secnav button[aria-current=true]{background:var(--brand);color:#fff}
+.secnav button[aria-current=true] em{color:#fff}
+.rules{margin-top:10px}
+.rules .kv span:first-child{color:var(--ink);flex-shrink:1}
+.del{border:0;background:none;color:var(--muted);font:inherit;font-size:12.5px;cursor:pointer;flex:none;padding:0 0 0 8px}
+header.top h1{cursor:pointer}
+
+/* PC 화면 */
+@media (min-width:1000px){
+  html{overflow-x:clip}
+  .app{max-width:1200px;padding:0 32px 56px}
+  header.top{height:64px;justify-content:flex-start;margin:0 calc(50% - 50vw) 20px;padding:0 max(32px,calc(50vw - 568px));background:var(--surface);border-bottom:1px solid var(--grid)}
+  header.top h1,.home header.top h1{font-size:18px;font-weight:700;color:var(--brand)}
+  header.top h1::after{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--pink);margin-left:5px;vertical-align:middle}
+  header.top .back{display:none}
+  nav.tabs{top:0;bottom:auto;left:auto;right:max(32px,calc(50vw - 568px));height:64px;background:none;border:0;z-index:7}
+  nav.tabs div{width:auto;max-width:none;gap:4px;align-items:center}
+  nav.tabs button{flex:none;flex-direction:row;font-size:14.5px;padding:10px 18px;border-radius:10px;gap:0}
+  nav.tabs svg{display:none}
+  nav.tabs button[aria-current=true]{background:var(--surface2)}
+  h2{font-size:26px;margin:8px 0 4px}
+  h2+.sub{margin:0 0 18px}
+  .card{margin:0 0 16px;padding:24px}
+  .cta{position:static;background:none;padding:0}
+  .toast{bottom:40px}
+  .busy{padding-top:160px}
+  .pbar{max-width:360px;margin-left:auto;margin-right:auto}
+  details.disc{margin:24px 0 0}
+
+  .land{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);grid-template-areas:"f f" "a s" "b s" "b i";gap:0 24px;align-items:start;padding-top:28px}
+  .land>.intro{grid-area:a;padding:20px 0 24px}
+  .land>.intro h2{font-size:38px;letter-spacing:-1.2px}
+  .land>.intro .sub{font-size:16px}
+  .land>.card.sel{grid-area:f}
+  .land>.steps{grid-area:s}
+  .land>.start{grid-area:b}
+  .land>.info{grid-area:i}
+
+  .cols{columns:2;column-gap:16px}
+  .cols>*{break-inside:avoid}
+  .cols>.span{column-span:all}
+  .herocard{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);grid-template-areas:"a c" "t c";gap:0 32px;align-items:start}
+  .herocard .ha{grid-area:a}.herocard .hc{grid-area:c}.herocard .tiles{grid-area:t}
+  .hero{font-size:40px}
+  .cols .card.tight{padding:20px 24px}
+
+  .sethead{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:16px}
+  .sethead .seg{width:220px;margin:0}
+  .sethead h2+.sub{margin-bottom:0}
+  .setwrap{display:grid;gap:24px;align-items:start}
+  .setwrap.adv{grid-template-columns:200px minmax(0,1fr) 320px}
+  .setwrap.basic{grid-template-columns:minmax(0,1fr) 320px}
+  .secnav{flex-direction:column;position:sticky;top:84px;margin:0;padding:0;overflow:visible;background:none}
+  .secnav button{border-radius:12px;padding:12px 14px;flex-direction:row;flex-wrap:wrap;text-align:left;gap:2px 6px;background:none}
+  .secnav button b{font-size:15px}
+  .secnav button span{display:block;order:3;width:100%;font-size:12px;color:var(--muted)}
+  .secnav button[aria-current=true]{background:var(--surface);color:var(--brand);box-shadow:inset 3px 0 0 var(--brand)}
+  .secnav button[aria-current=true] em{color:var(--pink)}
+  .setmain .lg{margin:0 0 12px}
+  .gg{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+  .gg .card{margin:0;padding:20px}
+  .gg .wide{grid-column:1/-1}
+  .side{position:sticky;top:84px}
+  .side .card{padding:20px;margin-bottom:12px}
+  .side .kv{font-size:13px;padding:7px 0}
+}
