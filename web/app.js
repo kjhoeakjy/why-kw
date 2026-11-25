@@ -5,7 +5,7 @@
   'use strict';
   const $ = (s, el = document) => el.querySelector(s);
   const app = $('#app');
-  let CAT = null, LIVE = false, AGENT = false;
+  let CAT = null, LIVE = false, AGENT = false, COST = null;
   const cache = new Map();
   const S = {
     mode: null, tab: 'create', busy: null, logs: [],
@@ -22,6 +22,14 @@
   const toast = m => { const t = $('#toast'); t.textContent = m; t.classList.add('on'); setTimeout(() => t.classList.remove('on'), 2200); };
   const GL = () => Object.fromEntries(Object.entries(CAT.feature_groups).map(([k, v]) => [k, v.label]));
   const horizonLabel = h => h === 5 ? '단기(5거래일)' : '중기(20거래일)';
+  const SHORT = { price: '가격 흐름', volume: '거래량', risk: '위험', size: '기업 규모' };
+  const PRESET = { balanced: '수익성·위험 균형', return: '수익성 우선', low_risk: '낙폭 최소화', low_trading: '거래 횟수 최소화' };
+  const aiTitle = s => { const x = s.groups.filter(g => g !== 'price'); return (x.length ? x.map(g => SHORT[g]).join('·') : '가격 흐름') + ' 중시 투자 AI'; };
+  const verdict = (d, b) => {
+    if (d.cagr >= b.cagr && d.mdd >= b.mdd) return d.cagr < 0 ? ['조건부 채택', '수익률·최대 낙폭 개선, 손실 지속'] : ['채택 가능', '수익률·최대 낙폭 개선'];
+    if (d.cagr < b.cagr && d.mdd < b.mdd) return ['채택 보류', '수익률·최대 낙폭 동시 악화'];
+    return ['채택 보류', d.cagr < b.cagr ? '최대 낙폭 개선, 수익률 하락' : '수익률 개선, 최대 낙폭 확대'];
+  };
 
   /* ---------- 명세 ---------- */
   const toSpec = (s, mode) => ({
@@ -132,7 +140,7 @@
   const header = () => `<header class="top"><h1>${S.mode === 'qs' ? 'QUANT STUDIO' : S.mode === 'my' ? 'MY AI' : '나만의 AI를 키움'}</h1>
     <span class="badge ${LIVE ? 'live' : 'pre'}">${LIVE ? '실시간 학습' : '사전 계산'}</span>
     ${S.mode ? '<button data-act="home">처음</button>' : ''}</header>`;
-  const tabs = () => !S.mode ? '' : `<nav class="tabs"><div>${[['create', S.mode === 'qs' ? '연구' : '설정'], ['validate', '검증'], ['optimize', S.mode === 'qs' ? '최적화' : '개선'], ['versions', '버전']]
+  const tabs = () => !S.mode ? '' : `<nav class="tabs"><div>${(S.mode === 'qs' ? [['create', '연구'], ['validate', '검증'], ['optimize', '최적화'], ['versions', '버전']] : [['validate', '내 AI'], ['create', '설정'], ['optimize', '개선'], ['versions', '기록·공유']])
     .map(([k, l]) => `<button data-act="tab" data-v="${k}" aria-current="${S.tab === k}">${l}</button>`).join('')}</div></nav>`;
   const disclosures = () => `<footer class="disc"><b>유의 사항</b><ul>${CAT.disclosures.map(d => `<li>${esc(d)}</li>`).join('')}<li>신입사원 과제 시연용 화면이며 키움증권의 실제 서비스가 아님</li></ul>
     데이터: ${esc(CAT.data.source)} · ${CAT.data.start}~${CAT.data.end} · ${CAT.data.rows.toLocaleString()}행 · 자료 식별번호 ${CAT.data.snapshot_id}</footer>`;
@@ -142,15 +150,19 @@
     return `${header()}
       <h2 style="margin-top:40px">개인 투자 기준 학습 AI</h2>
       <p class="sub" style="margin-bottom:28px">계좌 없이 이용 가능하며 국내주식 실제 시세로 학습하고 가상 투자금으로 검증합니다.</p>
-      ${f ? `<div class="card sel"><h3>공유받은 연구 설정</h3><p class="sub">${describe(f.spec).map(esc).join(' · ')}</p>
-        <button class="btn small" data-act="fork">내 기준으로 재설정</button><p class="muted">공유 대상은 연구 설정이며 수익률·종목은 포함하지 않음</p></div>` : ''}
+      ${f ? recipeCard(f.spec, '<button class="btn small" data-act="fork">내 투자 방식으로 변경</button>', '공유받은 연구 설정') : ''}
       <div class="modepick">
         <button data-act="mode" data-v="my"><em>MY AI</em><b>개인 투자자</b><span class="sub">항목 선택 후 AI가 연구 설계·학습</span></button>
         <button data-act="mode" data-v="qs"><em>QUANT STUDIO</em><b>전문 투자자</b><span class="sub">데이터·모델·전략·목적함수 직접 설계</span></button>
       </div>
       <div class="card tight"><div class="kv"><span>사용 데이터</span><span>국내주식 일봉 ${CAT.data.start.slice(0, 4)}~${CAT.data.end.slice(0, 7)}</span></div>
         <div class="kv"><span>학습·검증 실행 수</span><span>${CAT.index.runs.toLocaleString()}건 (모델 ${Object.keys(CAT.index.models).length}개)</span></div>
-        <div class="kv"><span>실행 방식</span><span>${LIVE ? '요청 시 서버 학습' : '사전 실행 결과 표시'}</span></div></div>
+        <div class="kv"><span>실행 방식</span><span>${LIVE ? '요청 시 서버 학습' : '사전 학습·검증 결과 조회'}</span></div></div>
+      <div class="card tight"><h3>작동 방식</h3>
+        <div class="kv"><span>공통 금융 AI</span><span>요청 해석, 연구·개선 실험 설계</span></div>
+        <div class="kv"><span>개인 모델</span><span>고객별 데이터·기간 선택에 따른 별도 학습</span></div>
+        <div class="kv"><span>검증</span><span>실제 과거 시세, 거래 비용 반영 가상 운용</span></div>
+        ${LIVE ? '' : '<p class="muted">본 페이지는 동일 프로그램으로 사전 학습·검증한 결과 640건을 조회합니다. 요청 시 실시간 학습은 서버 실행 환경에서 지원합니다.</p>'}</div>
       ${disclosures()}`;
   }
 
@@ -223,26 +235,40 @@
     const ver = S.versions.find(v => v.run.run_id === r.run_id);
     const chart = lineChart(s.dates, [
       { name: '모델 가상 운용', short: '모델', color: 'var(--s1)', values: s.strategy, main: true },
-      { name: '코스피(지수 대용)', short: '코스피', color: 'var(--s2)', values: s.market },
+      { name: '코스피 대용(시가총액 가중 산출)', short: '코스피 대용', color: 'var(--s2)', values: s.market },
       { name: '대상 300종목 동일가중', short: '300종목', color: 'var(--s3)', dash: '3 3', values: s.universe }],
       { fmt: v => Math.round(v / 1e4).toLocaleString() + '만', split: CAT.periods.locked_final[0], base: r.s.cash, log: true, label: '가상 평가금액 추이(로그 축)' });
     const roll = r.rolling_6m, imp = r.model.importance_last_fold.slice(0, qs ? 20 : 5), mx = imp[0].share;
     const sk = r.ledger_summary.skipped;
-    return `<h2>${ver ? ver.name + ' · ' : ''}검증 결과</h2>
-      <p class="sub">${describe(r.s).map(esc).join(' · ')}</p><p>${srcBadge(r)} <span class="badge">모델 ${r.model_id}</span> <span class="badge">정책 ${r.policy_id}</span></p>
+    const bv = ver && S.versions.indexOf(ver) > 0 ? S.versions[0].run.metrics.development : null;
+    const head = qs ? `<h2>${ver ? ver.name + ' · ' : ''}검증 결과</h2>
+      <p class="sub">${describe(r.s).map(esc).join(' · ')}</p><p>${srcBadge(r)} <span class="badge">모델 ${r.model_id}</span> <span class="badge">정책 ${r.policy_id}</span></p>`
+      : `<h2>${esc(aiTitle(r.s))} ${ver ? ver.name : ''}</h2>
+      <p class="sub">${r.s.groups.map(g => SHORT[g]).join('·')} 정보 · ${horizonLabel(r.s.h)} · ${r.s.buf > 1 ? '낮은 거래 빈도' : '정기 교체'}${r.s.mf ? ' · 하락장 신규 매수 중단' : ''}</p><p>${srcBadge(r)}</p>`;
+    const verdictNote = bv ? `<p class="sub">${d.cagr >= 0 ? '원금 대비 수익 발생' : bv.cagr < d.cagr ? '기존 모델 대비 손실 폭 감소, 원금 손실 발생' : '원금 손실 발생'}</p>` : `<p class="sub">${d.cagr >= 0 ? '원금 대비 수익 발생' : '원금 손실 발생'}</p>`;
+    const ck = staticKey(r.s), cr = COST && ck ? COST[`${ck.m}__${ck.p}`] : null;
+    const costCard = cr ? `<div class="card"><h3>거래 비용 가정별 결과</h3><p class="sub">동일 예측 모델, 비용 가정 변경 시 검증 구간 성과</p>
+        <div class="scroll"><table><tr><th>비용 가정</th><th>연 수익률</th><th>최대 낙폭</th></tr>
+        <tr><td>비용 없음</td><td class="${cls(cr.zero_cost[0])}">${pct(cr.zero_cost[0])}</td><td>${pct(cr.zero_cost[1])}</td></tr>
+        <tr class="bestrow"><td>기본 가정</td><td class="${cls(d.cagr)}">${pct(d.cagr)}</td><td>${pct(d.mdd)}</td></tr>
+        <tr><td>슬리피지 3배</td><td class="${cls(cr.high_slippage[0])}">${pct(cr.high_slippage[0])}</td><td>${pct(cr.high_slippage[1])}</td></tr></table></div>
+        <p class="muted">기본 가정: 수수료 0.015%, 매도 시 거래세 0.20%, 슬리피지 편도 0.10%. 슬리피지 3배: 편도 0.30%</p></div>` : '';
+    const askCard = qs ? '' : `<div class="card"><h3>내 AI 개선 요청</h3>${['reduce_loss', 'less_trading', 'more_data'].map(k => `<button class="btn ghost small" data-act="opt" data-v="${k}">${CAT.improvements[k].label}</button>`).join('')}</div>`;
+    return `${head}
       <div class="card"><p class="sub">${d.from.slice(0, 4)}~${d.to.slice(0, 4)}년 검증 구간, ${man(d.start_value)} 투자 가정</p>
-        <div class="hero ${cls(d.total_return)}">${won(d.end_value)} <small>${pct(d.total_return)} · 연 ${pct(d.cagr)}</small></div>
+        <div class="hero ${cls(d.total_return)}">${won(d.end_value)} <small>${pct(d.total_return)} · 연 ${pct(d.cagr)}</small></div>${verdictNote}
         ${chart}
         <div class="tiles">
           <div class="tile"><div class="k">최대 낙폭</div><div class="v down">${pct(d.mdd)}</div><div class="n">${d.mdd_peak}~${d.mdd_trough}${d.mdd_recovered ? ' · 회복 ' + d.mdd_recovered : ' · 구간 내 미회복'}</div></div>
           <div class="tile"><div class="k">거래 횟수</div><div class="v">연 ${Math.round(d.trades_per_year)}회</div><div class="n">수수료·세금 ${won(d.explicit_cost_krw)}</div></div>
-          <div class="tile"><div class="k">동일 기간 코스피</div><div class="v ${cls(r.benchmarks.market.dev.cagr)}">연 ${pct(r.benchmarks.market.dev.cagr)}</div><div class="n">비용·배당 미반영</div></div>
+          <div class="tile"><div class="k">동일 기간 코스피 대용</div><div class="v ${cls(r.benchmarks.market.dev.cagr)}">연 ${pct(r.benchmarks.market.dev.cagr)}</div><div class="n">비용·배당 미반영</div></div>
           <div class="tile"><div class="k">투자금 부족 미체결</div><div class="v">${sk.unaffordable}건</div><div class="n">거래정지·상한가 미체결 ${sk.untradable_buy}건</div></div>
         </div></div>
+      ${askCard}${costCard}
       <div class="card"><h3>최종 평가 구간(${f.from}~${f.to})</h3>
         <p class="sub">후보 선정에 사용하지 않은 기간</p>
         <div class="kv"><span>모델</span><span class="${cls(f.total_return)}">${pct(f.total_return)} (낙폭 ${pct(f.mdd)})</span></div>
-        <div class="kv"><span>코스피(지수 대용)</span><span class="${cls(r.benchmarks.market.final.total_return)}">${pct(r.benchmarks.market.final.total_return)} (낙폭 ${pct(r.benchmarks.market.final.mdd)})</span></div>
+        <div class="kv"><span>코스피 대용</span><span class="${cls(r.benchmarks.market.final.total_return)}">${pct(r.benchmarks.market.final.total_return)} (낙폭 ${pct(r.benchmarks.market.final.mdd)})</span></div>
         <div class="kv"><span>대상 300종목 동일가중</span><span class="${cls(r.benchmarks.universe.final.total_return)}">${pct(r.benchmarks.universe.final.total_return)}</span></div></div>
       ${roll.n_windows ? `<div class="card"><h3>투자 시작 시점별 6개월 수익률</h3>
         <div class="kv"><span>하위 10%</span><span class="${cls(roll.p10)}">${pct(roll.p10)}</span></div>
@@ -250,13 +276,13 @@
         <div class="kv"><span>상위 10%</span><span class="${cls(roll.p90)}">${pct(roll.p90)}</span></div>
         <div class="kv"><span>손실 구간 비율</span><span>${(roll.loss_share * 100).toFixed(0)}% (${roll.n_windows}개 구간)</span></div>
         <p class="muted">${esc(roll.note)}</p></div>` : ''}
-      <div class="card"><h3>변수 중요도</h3>
+      <div class="card"><h3>${qs ? '변수 중요도' : '내 AI가 중시한 정보'}</h3>
         ${imp.map(i => `<div style="margin:7px 0"><div class="kv" style="border:0;padding:0"><span>${esc(i.label)}</span><span>${(i.share * 100).toFixed(1)}%</span></div><div class="bar"><span style="width:${i.share / mx * 100}%"></span></div></div>`).join('')}
         <p class="muted">${esc(r.model.importance_kind)} · 최종 학습 기준. 인과관계를 의미하지 않음</p></div>
       ${qs ? `<div class="card"><h3>상세 지표</h3><div class="scroll"><table><tr><th>검증 구간</th><th>연 수익률</th><th>최대 낙폭</th><th>샤프 지수</th><th>연 거래</th></tr>
-          ${benchRow('전략(비용 반영)', d)}${benchRow('코스피 대용', r.benchmarks.market.dev)}${benchRow('유니버스 EW', r.benchmarks.universe.dev)}
+          ${benchRow('전략(비용 반영)', d)}${benchRow('코스피 대용', r.benchmarks.market.dev)}${benchRow('300종목 동일가중', r.benchmarks.universe.dev)}
           <tr><th>최종 평가 구간</th><th></th><th></th><th></th><th></th></tr>
-          ${benchRow('전략(비용 반영)', f)}${benchRow('코스피 대용', r.benchmarks.market.final)}${benchRow('유니버스 EW', r.benchmarks.universe.final)}</table></div>
+          ${benchRow('전략(비용 반영)', f)}${benchRow('코스피 대용', r.benchmarks.market.final)}${benchRow('300종목 동일가중', r.benchmarks.universe.final)}</table></div>
         <div class="kv"><span>순위 상관계수(Rank IC), 검증 / 최종</span><span>${r.model.ic.dev.rank_ic_mean} / ${r.model.ic.final.rank_ic_mean}</span></div>
         <div class="kv"><span>순위 상관계수 양수 비율(검증)</span><span>${(r.model.ic.dev.rank_ic_positive_share * 100).toFixed(0)}% · ${r.model.ic.dev.n_dates}일</span></div>
         <div class="kv"><span>승률(청산 거래)</span><span>${r.ledger_summary.win_rate != null ? (r.ledger_summary.win_rate * 100).toFixed(1) + '%' : '–'}</span></div>
@@ -272,7 +298,7 @@
         <p class="muted">연구 기준일 ${CAT.data.end} 이전의 과거 가상 거래 기록이며 현재 시점의 추천이 아님. ${esc(r.ledger_summary.cost_assumption)}</p></details>
       <details class="card"><summary>실행 기록·재현 정보</summary><div class="log">${[...(r.model.training_log || []), ...r.logs].map(esc).join('\n')}</div>
         <p class="muted">run ${r.run_id} · engine ${r.engine_version} · snapshot ${CAT.data.snapshot_id} · seed 42</p></details>
-      <button class="btn" data-act="tab" data-v="optimize">${qs ? '후보 실험' : '모델 개선'}</button>
+      ${qs ? '<button class="btn" data-act="tab" data-v="optimize">후보 실험</button>' : ''}
       ${disclosures()}`;
   }
 
@@ -290,7 +316,7 @@
         ${o.rows.map(x => x.error ? `<tr><td><span class="vtag">${x.tag}</span> ${esc(x.change)}</td><td colspan="${qs ? 6 : 3}" style="text-align:left" class="muted">${esc(x.error)}</td></tr>` : (() => {
           const d = x.run.metrics.development;
           return `<tr class="${x.tag === o.best ? 'bestrow' : ''}"><td><span class="vtag">${x.tag}</span> ${x.kind === 'base' ? '기존' : `<span class="badge ${x.retrained ? 'm' : 'p'}">${x.retrained ? '모델 재학습' : '운용 방식 변경'}</span>`}</td>
-            <td class="${cls(d.total_return)}">${man(d.end_value)}</td>${qs ? `<td class="${cls(d.cagr)}">${pct(d.cagr)}</td>` : ''}<td>${pct(d.mdd)}</td><td>${Math.round(d.trades_per_year)}</td>${qs ? `<td>${x.J.toFixed(3)}</td><td>${x.run.model.ic.dev.rank_ic_mean}</td>` : ''}</tr>`;
+            <td class="${cls(d.total_return)}">${man(d.end_value)}${x.kind !== 'base' ? `<br><span class="muted">${verdict(d, base.run.metrics.development)[0]}</span>` : ''}</td>${qs ? `<td class="${cls(d.cagr)}">${pct(d.cagr)}</td>` : ''}<td>${pct(d.mdd)}</td><td>${Math.round(d.trades_per_year)}</td>${qs ? `<td>${x.J.toFixed(3)}</td><td>${x.run.model.ic.dev.rank_ic_mean}</td>` : ''}</tr>`;
         })()).join('')}</table></div>
         ${o.rows.filter(x => !x.error && x.kind !== 'base').map(x => {
           const d = x.run.metrics.development, b = base.run.metrics.development;
@@ -298,10 +324,11 @@
           say.push(d.mdd > b.mdd ? `최대 낙폭 ${pct(b.mdd)}에서 ${pct(d.mdd)}로 축소` : d.mdd < b.mdd ? `최대 낙폭 ${pct(b.mdd)}에서 ${pct(d.mdd)}로 확대` : '최대 낙폭 동일');
           say.push(d.end_value > b.end_value ? `최종 평가금액 ${man(d.end_value - b.end_value)} 증가` : `최종 평가금액 ${man(b.end_value - d.end_value)} 감소`);
           say.push(`연 거래 ${Math.round(b.trades_per_year)}회에서 ${Math.round(d.trades_per_year)}회`);
-          return `<div class="kv" style="display:block"><b>${x.tag}</b> ${esc(x.change)}<br><span class="sub">${say.join(', ')}. 최종 평가 구간 ${pct(x.run.metrics.locked_final.total_return)} (기존 ${pct(base.run.metrics.locked_final.total_return)})</span>
-            <button class="btn ghost small" data-act="adopt" data-v="${x.tag}">${x.tag} 신규 버전 저장</button></div>`;
+          const vd = verdict(d, b);
+          return `<div class="kv" style="display:block"><b>${x.tag}</b> ${esc(x.change)} <span class="badge ${vd[0] === '채택 보류' ? 'pre' : 'm'}">${vd[0]}</span><br><span class="sub">${vd[1]}. ${say.join(', ')}.${qs ? ` 최종 평가 구간 ${pct(x.run.metrics.locked_final.total_return)}(기존 ${pct(base.run.metrics.locked_final.total_return)})` : ''}</span>
+            <button class="btn ghost small" data-act="adopt" data-v="${x.tag}">${x.tag} ${vd[0] === '채택 보류' ? '보류 판정 후보 저장' : '신규 버전 저장'}</button></div>`;
         }).join('')}
-        <div class="note">검증 구간 목적함수(${({ balanced: '균형', return: '수익 우선', low_risk: '낙폭 최소화', low_trading: '거래 횟수 최소화' })[S.spec.preset]}) 기준 최상위 후보는 <b>${o.best}</b>입니다. 악화된 결과도 동일하게 표시하며 최종 평가 구간 수치는 후보 선정에 사용하지 않았습니다.</div>
+        <div class="note">목적함수(${PRESET[S.spec.preset]}) 기준 최상위 후보는 <b>${o.best}</b>입니다. 목적함수 최상위 후보도 수익률 또는 최대 낙폭이 악화된 경우 채택 보류로 판정합니다. 최종 평가 구간 수치는 후보 선정에 사용하지 않았습니다.</div>
         <button class="btn ghost small" data-act="keep">기존 유지</button></div>
         <div class="card"><h3>버전별 가상 평가금액</h3>${compareChart(o.rows.filter(x => !x.error).map(x => ({ name: x.tag + ' ' + x.change, short: x.tag, run: x.run })))}</div>`;
     }
@@ -330,20 +357,28 @@
   function versionsView() {
     if (!S.versions.length) return validateView();
     const url = shareUrl();
-    return `<h2>모델 버전</h2>
+    return `<h2>${S.mode === 'qs' ? '모델 버전' : '내 AI 기록'}</h2>
       ${S.versions.map((v, i) => { const d = v.run.metrics.development; return `<div class="card tight ${v.run.run_id === S.cur.run_id ? 'sel' : ''}">
         <div class="kv" style="border:0"><b>${v.name}</b><span>${v.kind === 'base' ? '<span class="badge">최초 학습</span>' : `<span class="badge ${v.retrained ? 'm' : 'p'}">${v.retrained ? '모델 재학습' : '운용 방식 변경'}</span>`}</span></div>
         <p class="sub">${esc(v.why)}</p>
         <div class="kv"><span>검증 구간</span><span>연 ${pct(d.cagr)} · 최대 낙폭 ${pct(d.mdd)} · 연 거래 ${Math.round(d.trades_per_year)}회</span></div>
         <div class="kv"><span>최종 평가 구간</span><span>${pct(v.run.metrics.locked_final.total_return)}</span></div>
-        <p class="muted">모델 ${v.run.model_id} · 정책 ${v.run.policy_id}</p>
+        ${S.mode === 'qs' ? `<p class="muted">모델 ${v.run.model_id} · 정책 ${v.run.policy_id}</p>` : ''}
         ${v.run.run_id !== S.cur.run_id ? `<button class="btn ghost small" data-act="use" data-v="${i}">해당 버전 조회</button>` : ''}</div>`; }).join('')}
       ${S.versions.length > 1 ? `<div class="card"><h3>버전 비교</h3>${compareChart(S.versions.map(v => ({ name: v.name, short: v.name, run: v.run })))}</div>` : ''}
-      <div class="card"><h3>연구 설정 공유</h3><p class="sub">연구 설정이 담긴 링크이며 수익률·종목은 포함하지 않습니다. 수신자는 계좌 없이 본인 기준으로 변경하여 재학습 가능합니다.</p>
-        <input type="text" readonly value="${esc(url)}" id="share"><button class="btn small" data-act="copy">링크 복사</button></div>
-      <div class="card"><h3>계좌 연결 시</h3><p class="sub">가상 투자금을 실제 보유 종목·현금·체결 내역으로 대체하여 동일 연구를 지속합니다. 생성한 버전과 실험 기록은 유지됩니다.</p>
+      ${recipeCard(S.cur.s, `<input type="text" readonly value="${esc(url)}" id="share"><button class="btn small" data-act="copy">공유 링크 복사</button>`, '연구 설정 공유')}
+      <div class="card"><h3>이용 단계</h3>
+        <div class="kv"><span>현재</span><span>비회원 체험, 기록은 현재 화면에서 유지</span></div>
+        <div class="kv"><span>영웅문S# 설치</span><span>모델·실험 기록 이전</span></div>
+        <div class="kv"><span>회원가입</span><span>여러 기기에서 연구 기록 조회</span></div>
+        <div class="kv"><span>계좌 개설·인증</span><span>보유 종목·현금 기준 재산정</span></div>
         <p class="muted">본 시연은 실계좌 연결·주문 기능 미포함</p></div>`;
   }
+  const recipeCard = (s, action, label) => `<div class="card sel"><p class="muted">${label}</p><h3 style="font-size:16px">${esc(aiTitle(s))}</h3>
+      <div class="kv"><span>데이터</span><span>${s.groups.map(g => SHORT[g]).join(' · ')}</span></div>
+      <div class="kv"><span>분석 기간</span><span>${s.h}거래일</span></div>
+      <div class="kv"><span>최적화 기준</span><span>${PRESET[s.preset || 'balanced']}</span></div>
+      ${action}<p class="muted">공유 제외: 수익률, 종목, 개인 자산 정보</p></div>`;
   const shareUrl = () => location.origin + location.pathname + '#r=' + btoa(unescape(encodeURIComponent(JSON.stringify({ m: S.mode, s: S.cur ? S.cur.s : S.spec }))));
 
   function render() {
@@ -444,14 +479,14 @@
     const b = ev.target.closest('[data-act]'); if (!b) return;
     const a = b.dataset.act, v = b.dataset.v, s = S.spec;
     if (a === 'home') { S.mode = null; S.tab = 'create'; }
-    else if (a === 'mode') { S.mode = v; S.tab = S.cur ? 'validate' : 'create'; }
+    else if (a === 'mode') { S.mode = v; S.tab = S.cur ? 'validate' : 'create'; window.scrollTo(0, 0); }
     else if (a === 'fork') { S.spec = { ...S.spec, ...S.forked.spec }; S.mode = S.forked.mode || 'my'; S.forked = null; S.tab = 'create'; toast('연구 설정 복제 완료'); }
     else if (a === 'tab') { S.tab = v; window.scrollTo(0, 0); }
     else if (a === 'grp') { if (b.dataset.lock) return toast('가격 흐름은 필수 항목'); s.groups = s.groups.includes(v) ? s.groups.filter(g => g !== v) : [...s.groups, v]; }
     else if (a === 'set') { s[b.dataset.k] = +v; }
     else if (a === 'nl') return parseNl();
     else if (a === 'run') return runCurrent();
-    else if (a === 'opt') return runOpt(v);
+    else if (a === 'opt') { S.tab = 'optimize'; return runOpt(v); }
     else if (a === 'adopt') {
       const x = S.opt.rows.find(r => r.tag === v);
       S.versions.push({ name: 'V' + (S.versions.length + 1), kind: x.kind, retrained: x.retrained, why: `${S.opt.label} 요청: ${x.change}`, run: x.run });
@@ -478,6 +513,7 @@
   (async function init() {
     try {
       CAT = await fetch('data/catalog.json').then(r => r.json());
+      try { COST = await fetch('data/cost.json').then(r => r.ok ? r.json() : null); } catch (e) { /* 비용 비교 생략 */ }
       try { const h = await fetch('api/health').then(r => r.ok ? r.json() : null); if (h && h.mode === 'live') { LIVE = true; AGENT = !!h.agent; } } catch (e) { /* 정적 모드 */ }
       const qm = new URLSearchParams(location.search).get('mode');
       if (qm === 'my' || qm === 'qs') S.mode = qm;
