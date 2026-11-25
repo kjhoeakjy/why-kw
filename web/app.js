@@ -110,10 +110,10 @@
     if (opt.base != null) g += `<line x1="${L}" x2="${W - R}" y1="${y(opt.base)}" y2="${y(opt.base)}" stroke="var(--axis)" stroke-width="1"/>`;
     const ends = series.map(s => ({ s, y: y(s.values[s.values.length - 1]) })).sort((a, b) => a.y - b.y);
     for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 12) ends[i].y = ends[i - 1].y + 12;
-    const paths = series.map(s => `<path d="${s.values.map((v, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1)).join('')}" fill="none" stroke="${s.color}" stroke-width="${s.main ? 2.4 : 1.6}" stroke-linejoin="round"/>`).join('');
+    const paths = series.map(s => `<path d="${s.values.map((v, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1)).join('')}" fill="none" stroke="${s.color}" stroke-width="${s.main ? 2.4 : 1.4}" ${s.dash ? `stroke-dasharray="${s.dash}"` : ''} stroke-linejoin="round"/>`).join('');
     const labels = ends.map(e => `<text x="${W - R + 5}" y="${e.y + 4}" font-size="10.5" fill="var(--ink2)">${esc(e.s.short || e.s.name)}</text>`).join('');
     charts[id] = { dates, series, x, y, L, R, W, H, T, B, fmt };
-    const legend = `<div class="legend">${series.map(s => `<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div>`;
+    const legend = `<div class="legend">${series.map(s => `<span><i style="border-top-color:${s.color};border-top-style:${s.dash ? 'dashed' : 'solid'}"></i>${esc(s.name)}</span>`).join('')}</div>`;
     return `${legend}<div class="chart" data-chart="${id}"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opt.label || '추이 차트')}">${g}${paths}${labels}<line class="cross" y1="${T}" y2="${H - B}" stroke="var(--ink2)" stroke-width="1" style="display:none"/></svg><div class="tip"></div></div>`;
   }
   function chartMove(el, ev) {
@@ -122,14 +122,14 @@
     const i = Math.max(0, Math.min(c.dates.length - 1, Math.round((px - c.L) / (c.W - c.L - c.R) * (c.dates.length - 1))));
     const cross = $('.cross', el), tip = $('.tip', el);
     cross.setAttribute('x1', c.x(i)); cross.setAttribute('x2', c.x(i)); cross.style.display = '';
-    tip.innerHTML = `<b>${c.dates[i]}</b><br>` + c.series.map(s => `<span style="color:${s.color}">●</span> ${esc(s.short || s.name)} ${c.fmt(s.values[i])}`).join('<br>');
+    tip.innerHTML = `<b>${c.dates[i]}</b><br>` + c.series.map(s => `${esc(s.short || s.name)} <b>${c.fmt(s.values[i])}</b>`).join('<br>');
     tip.style.display = 'block';
     tip.style.left = Math.max(70, Math.min(rect.width - 70, c.x(i) / c.W * rect.width)) + 'px'; tip.style.top = '40px';
   }
   const chartLeave = el => { $('.cross', el).style.display = 'none'; $('.tip', el).style.display = 'none'; };
 
   /* ---------- 화면 조각 ---------- */
-  const header = () => `<header class="top"><h1>${S.mode === 'qs' ? 'QUANT STUDIO' : S.mode === 'my' ? 'MY AI' : 'AI FACTORY'}</h1>
+  const header = () => `<header class="top"><h1>${S.mode === 'qs' ? 'QUANT STUDIO' : S.mode === 'my' ? 'MY AI' : 'KIWOOM AI FACTORY'}</h1>
     <span class="badge ${LIVE ? 'live' : 'pre'}">${LIVE ? '실시간 학습 서버' : '사전 계산 모드'}</span>
     ${S.mode ? '<button data-act="home">처음</button>' : ''}</header>`;
   const tabs = () => !S.mode ? '' : `<nav class="tabs"><div>${[['create', S.mode === 'qs' ? '연구' : '만들기'], ['validate', '검증'], ['optimize', S.mode === 'qs' ? '최적화' : '개선'], ['versions', '버전']]
@@ -140,13 +140,13 @@
   function landing() {
     const f = S.forked;
     return `${header()}
-      <h2>내 투자 기준으로<br>학습하는 투자 AI</h2>
-      <p class="sub">계좌도, 가입도 필요 없습니다. 기준을 고르면 실제 국내주식 과거 데이터로 모델을 학습하고, 가상 투자금으로 검증합니다.</p>
+      <h2 style="font-size:34px;margin-top:36px">내 기준으로<br>학습하는<br>투자 AI</h2>
+      <p class="sub" style="margin-bottom:28px">계좌 없이 시작합니다. 실제 국내주식 데이터로 학습하고 가상 투자금으로 검증합니다.</p>
       ${f ? `<div class="card sel"><h3>공유받은 연구 레시피</h3><p class="sub">${describe(f.spec).map(esc).join(' · ')}</p>
         <button class="btn small" data-act="fork">내 기준으로 다시 만들기</button><p class="muted">수익률이나 종목이 아니라 연구 설정만 공유됩니다.</p></div>` : ''}
       <div class="modepick">
-        <button data-act="mode" data-v="my"><b>간편하게 이용 · MY AI</b><span class="sub">두세 가지만 고르면 AI가 연구를 설계하고 학습합니다.</span></button>
-        <button data-act="mode" data-v="qs"><b>직접 연구 · QUANT STUDIO</b><span class="sub">데이터·Target·모델·전략·목적함수를 직접 정합니다.</span></button>
+        <button data-act="mode" data-v="my"><em>MY AI</em><b>개인 투자자</b><span class="sub">두세 가지만 고르면 AI가 연구를 설계하고 학습합니다.</span></button>
+        <button data-act="mode" data-v="qs"><em>QUANT STUDIO</em><b>전문 투자자</b><span class="sub">데이터·모델·전략·목적함수를 직접 설계합니다.</span></button>
       </div>
       <div class="card tight"><div class="kv"><span>사용 데이터</span><span>국내주식 일봉 ${CAT.data.start.slice(0, 4)}~${CAT.data.end.slice(0, 7)}</span></div>
         <div class="kv"><span>실제 학습·검증 실행 수</span><span>${CAT.index.runs.toLocaleString()}건 (모델 ${Object.keys(CAT.index.models).length}개)</span></div>
@@ -224,7 +224,7 @@
     const chart = lineChart(s.dates, [
       { name: '내 AI 가상 운용', short: '내 AI', color: 'var(--s1)', values: s.strategy, main: true },
       { name: '코스피(지수 대용)', short: '코스피', color: 'var(--s2)', values: s.market },
-      { name: '유니버스 동일가중', short: '300종목', color: 'var(--s3)', values: s.universe }],
+      { name: '유니버스 동일가중', short: '300종목', color: 'var(--s3)', dash: '3 3', values: s.universe }],
       { fmt: v => Math.round(v / 1e4).toLocaleString() + '만', split: CAT.periods.locked_final[0], base: r.s.cash, log: true, label: '가상 평가금액 추이(로그 축)' });
     const roll = r.rolling_6m, imp = r.model.importance_last_fold.slice(0, qs ? 20 : 5), mx = imp[0].share;
     const sk = r.ledger_summary.skipped;
@@ -319,9 +319,10 @@
   }
 
   function compareChart(items) {
-    const colors = ['var(--s1)', 'var(--s2)', 'var(--s3)', 'var(--s4)'];
+    const colors = ['var(--s1)', 'var(--s2)', 'var(--s1)', 'var(--s2)'];
     const it = items.slice(0, 4), dates = it[0].run.series.dates;
-    return lineChart(dates, it.map((x, i) => ({ name: x.name, short: x.short, color: colors[i], main: i === 0,
+    const dashes = [null, null, '5 3', '2 3'];
+    return lineChart(dates, it.map((x, i) => ({ name: x.name, short: x.short, color: colors[i], dash: dashes[i], main: i === 0,
       values: x.run.series.strategy.map(v => v / x.run.series.strategy[0] * 100) })),
       { fmt: v => v.toFixed(0), split: CAT.periods.locked_final[0], base: 100, label: '버전 비교(시작=100)' });
   }
@@ -478,6 +479,8 @@
     try {
       CAT = await fetch('data/catalog.json').then(r => r.json());
       try { const h = await fetch('api/health').then(r => r.ok ? r.json() : null); if (h && h.mode === 'live') { LIVE = true; AGENT = !!h.agent; } } catch (e) { /* 정적 모드 */ }
+      const qm = new URLSearchParams(location.search).get('mode');
+      if (qm === 'my' || qm === 'qs') S.mode = qm;
       const m = location.hash.match(/#r=(.+)/);
       if (m) { try { const o = JSON.parse(decodeURIComponent(escape(atob(m[1])))); if (o.s && Array.isArray(o.s.groups)) S.forked = { mode: o.m, spec: o.s }; } catch (e) { /* 잘못된 링크 무시 */ } }
       render();
