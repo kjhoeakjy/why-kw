@@ -128,7 +128,7 @@ const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malg
     T(s, t, { x: M, y, w: 3.3, h: 0.28, fontSize: 13, bold: true });
   });
   T(s, '공유 단위', { x: 5.1, y: by, w: 3, h: 0.25, fontSize: SM, color: C.text2 });
-  const kw = 2.9; pic(s, 'e-card.png', 5.1, by + 0.35, kw, 662 / 700, '연구 설정 공유 카드');
+  const kw = 2.6; pic(s, 'e-card.png', 5.1, by + 0.35, kw, 720 / 716, '연구 설정 공유 카드');
   const q = 2.3, qx = W - M - q, qy = by + 0.35;
   T(s, '시연 페이지', { x: qx, y: by, w: q, h: 0.25, fontSize: SM, color: C.text2 });
   s.addImage({ path: 'qr.png', x: qx, y: qy, w: q, h: q, altText: '시연 페이지 QR 코드', objectName: 'QR', hyperlink: { url: 'https://kjhoeakjy.github.io/why-kw/' } });
