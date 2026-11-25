@@ -1,8 +1,8 @@
 @font-face{font-family:"Pretendard Variable";font-weight:45 920;font-style:normal;font-display:swap;src:url("fonts/PretendardVariable.woff2") format("woff2-variations")}
 :root{
   --page:#f3f3f4;--surface:#ffffff;--surface2:#f4f4f5;--ink:#111111;--ink2:#55585e;--muted:#9a9da3;
-  --grid:#ececee;--axis:#d6d7da;--brand:#16245e;--brand-ink:#ffffff;--pink:#d6006f;
-  --s1:#16245e;--s2:#9a9da3;--s3:#9a9da3;--s4:#c4c6ca;
+  --grid:#ececee;--axis:#d6d7da;--brand:#0a1e5a;--brand-ink:#ffffff;--pink:#e9067f;
+  --s1:#0a1e5a;--s2:#9a9da3;--s3:#9a9da3;--s4:#c4c6ca;
   --good:#111111;--bad:#111111;--radius:18px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -257,3 +257,9 @@ header.top h1{cursor:pointer}
 .fit b{font-size:14px;color:var(--ink)}
 .fit.no b{color:var(--pink)}
 .fit.ok b{color:var(--brand)}
+
+.logo{height:17px;width:auto;margin-right:10px;cursor:pointer;display:none}
+.home .logo{display:block}
+.home header.top h1{padding-left:10px;border-left:1px solid var(--axis)}
+.home header.top h1::after{content:none}
+@media (min-width:1000px){.logo{display:block;height:20px}header.top h1{padding-left:12px;border-left:1px solid var(--axis)}header.top h1::after{content:none}}

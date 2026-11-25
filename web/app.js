@@ -139,7 +139,7 @@
   const chartLeave = el => { $('.cross', el).style.display = 'none'; $('.tip', el).style.display = 'none'; };
 
   /* ---------- 화면 조각 ---------- */
-  const header = () => `<header class="top">${S.mode ? '<button class="back" data-act="home" aria-label="처음으로">‹</button>' : ''}<h1 data-act="home">나만의 AI를 키움</h1></header>`;
+  const header = () => `<header class="top">${S.mode ? '<button class="back" data-act="home" aria-label="처음으로">‹</button>' : ''}<img class="logo" src="logo.png" alt="키움증권" data-act="home"><h1 data-act="home">나만의 AI를 키움</h1></header>`;
   const ICON = {
     home: '<svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg>',
     set: '<svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>',
@@ -157,7 +157,8 @@
     const f = S.forked;
     return `${header()}<div class="land">
       <div class="intro"><h2>투자 기준 학습·검증 AI</h2>
-        <p class="sub">주문 전 실제 데이터 검증, 계좌 개설 전 체험 가능</p></div>
+        <p class="sub">주문 전 실제 데이터 검증, 계좌 개설 전 체험 가능</p>
+        <p class="muted">신입사원 과제 시연용 화면이며 키움증권의 실제 서비스가 아님</p></div>
       ${f ? recipeCard(f.spec, '<button class="btn small" data-act="fork">설정 복제 후 수정</button>', '공유받은 설정') : ''}
       <div class="card steps"><h3>이용 순서</h3>
         <div class="kv"><span>01 투자 기준 선택</span><span>중시 정보, 보유 기간, 운용 방식</span></div>
