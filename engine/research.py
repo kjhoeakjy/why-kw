@@ -92,6 +92,26 @@ def _series(eq: pd.Series, step: int = 5) -> list:
     return [round(float(v)) for v in s.values], [str(d.date()) for d in s.index]
 
 
+def _yearly(eq: pd.Series, mk: pd.Series, un: pd.Series, ledger: list) -> list:
+    """연도별 성과. 기간 선택 시 수익률·거래 횟수·비용을 일별 자료 기준으로 합산하기 위한 값."""
+    out = []
+    for y in sorted(set(eq.index.year)):
+        m = eq.index.year == y
+        prev = eq[eq.index.year < y]
+        seg = pd.concat([prev.iloc[[-1]], eq[m]]) if len(prev) else eq[m]
+
+        def ret(x):
+            p_, c_ = x[x.index.year < y], x[x.index.year == y]
+            return round(float(c_.iloc[-1] / (p_.iloc[-1] if len(p_) else c_.iloc[0]) - 1), 4)
+
+        ys = str(y)
+        out.append({"year": y, "days": int(m.sum()), "start_value": round(float(seg.iloc[0])), "end_value": round(float(seg.iloc[-1])),
+                    "ret": ret(eq), "mdd": round(float((seg / seg.cummax() - 1).min()), 4), "market": ret(mk), "universe": ret(un),
+                    "n_trades": sum(1 for l in ledger if l["side"] in ("매수", "매도") and l["date"][:4] == ys),
+                    "cost": round(sum(l["cost"] for l in ledger if l["date"][:4] == ys))})
+    return out
+
+
 def execute(spec_in: dict, log=None, save: bool = True) -> dict:
     logs: list[str] = []
 
@@ -127,6 +147,7 @@ def execute(spec_in: dict, log=None, save: bool = True) -> dict:
         "trailing": {"as_of": str(eq.index[-1].date()), "strategy": bt.trailing(eq),
                      "market": bt.trailing(res["bm_market"])},
         "rolling_6m": bt.rolling_windows(eq, 6), "rolling_12m": bt.rolling_windows(eq, 12),
+        "yearly": _yearly(eq, res["bm_market"], res["bm_universe"], res["ledger"]),
         "series": {"dates": dts, "strategy": vals, "market": _series(res["bm_market"])[0],
                    "universe": _series(res["bm_universe"])[0]},
         "ledger_summary": {"n_trades": res["n_trades"], "win_rate": res["win_rate"], "skipped": res["skipped"],

@@ -20,7 +20,7 @@ GRID = {"k": [5, 10], "buf": [1.0, 3.0], "vf": [0.0, 0.3], "mf": [False, True], 
 
 def slim(r: dict) -> dict:
     s = r["series"]
-    step = 2
+    step = 1
     keep = list(range(0, len(s["dates"]), step))
     if keep[-1] != len(s["dates"]) - 1:
         keep.append(len(s["dates"]) - 1)
