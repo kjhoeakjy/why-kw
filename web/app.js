@@ -163,7 +163,12 @@
         <div class="kv"><span>01 투자 기준 선택</span><span>중시 정보, 보유 기간, 운용 방식</span></div>
         <div class="kv"><span>02 AI 학습·검증</span><span>실제 과거 시세, 거래 비용 반영</span></div>
         <div class="kv"><span>03 AI 개선</span><span>후보 비교, 채택 판정</span></div>
-        <button class="btn" style="margin-top:14px" data-act="mode" data-v="my">${S.cur ? '나의 AI 조회' : '투자 기준 설정 시작'}</button></div>
+        </div>
+      <div class="card"><button class="btn" data-act="acct">키움 계좌로 시작</button>
+        <p class="sub" style="margin:8px 2px 16px">보유 자산 반영, 거래 내역 학습, 자동 주문, 운용 보고서</p>
+        <button class="btn ghost" data-act="mode" data-v="my">${S.cur ? '나의 AI 조회' : '계좌 없이 시작'}</button>
+        <p class="sub" style="margin:8px 2px 0">AI 학습, 과거 데이터 검증, 설정 공유</p>
+        ${S.acct ? `<div class="note" style="margin-top:14px"><b>계좌 연결 후 제공 기능</b><br>보유 종목·현금 기준 AI 학습<br>나의 거래 내역 기반 학습<br>자동 매수·매도(주문 한도, 주문 전 승인)<br>주간·월간 운용 보고서<br><span class="muted">시연 화면은 계좌 연결 미지원. 계좌 없이 시작으로 체험 가능</span></div>` : ''}</div>
       <details class="card"><summary>서비스 안내</summary>
         <div class="kv"><span>검증 방식</span><span>실제 과거 시세, 거래 비용 반영</span></div>
         <div class="kv"><span>사용 데이터</span><span>국내주식 일봉 ${CAT.data.start.slice(0, 4)}~${CAT.data.end.slice(0, 7)}</span></div>
@@ -537,6 +542,7 @@
     else if (a === 'tab') { S.tab = v; window.scrollTo(0, 0); }
     else if (a === 'grp') { if (b.dataset.lock) return toast('가격 흐름은 필수 항목'); const ng = s.groups.includes(v) ? s.groups.filter(g => g !== v) : [...s.groups, v]; if (!LIVE && !Object.values(CAT.feature_sets).some(f => [...f].sort().join() === [...ng].sort().join())) return toast('해당 조합은 준비 중'); s.groups = ng; }
     else if (a === 'set') { s[b.dataset.k] = b.dataset.k === 'preset' ? v : +v; }
+    else if (a === 'acct') { S.acct = !S.acct; }
     else if (a === 'lvl') { S.adv = v === '1'; }
     else if (a === 'tog') { if (b.dataset.k === 'vf') s.vf = s.vf > 0 ? 0 : 0.3; else s.mf = !s.mf; }
     else if (a === 'nl') return parseNl();
