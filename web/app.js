@@ -164,7 +164,7 @@
         <div class="kv"><span>02 AI 학습·검증</span><span>실제 과거 시세, 거래 비용 반영</span></div>
         <div class="kv"><span>03 AI 개선</span><span>후보 비교, 채택 판정</span></div>
         </div>
-      <div class="card"><button class="btn" data-act="acct">키움 계좌로 시작</button>
+      <div class="card"><button class="btn" data-act="acct">키움증권 계좌로 시작</button>
         <p class="sub" style="margin:8px 2px 16px">보유 자산 반영, 거래 내역 학습, 자동 주문, 운용 보고서</p>
         <button class="btn ghost" data-act="mode" data-v="my">${S.cur ? '나의 AI 조회' : '계좌 없이 시작'}</button>
         <p class="sub" style="margin:8px 2px 0">AI 학습, 과거 데이터 검증, 설정 공유</p>
@@ -216,7 +216,7 @@
       ${adv ? `<div class="card"><h3>나의 전략 반영 <span class="badge">준비 중</span></h3>
         <div class="kv"><span>관심 업종·종목 범위</span><span>대상 종목 직접 지정</span></div>
         <div class="kv"><span>나의 매매 규칙</span><span>매수·매도 조건 직접 입력</span></div>
-        <div class="kv"><span>나의 거래 내역</span><span>키움 계좌 거래 기록 학습</span></div>
+        <div class="kv"><span>나의 거래 내역</span><span>키움증권 계좌 거래 기록 학습</span></div>
         <p class="muted">계좌 개설 고객 대상 제공 예정(설계안)</p></div>` : ''}
       ${planCard()}
       <div class="cta"><button class="btn" data-act="run">${S.cur ? '변경 기준 재학습' : 'AI 학습 시작'}</button></div>`;
@@ -417,7 +417,7 @@
           <div class="kv"><span>연 수익률</span><span>${man(cd.a.s.cash)} ${pct(cd.a.metrics.development.cagr)} / ${man(cd.b.s.cash)} ${pct(cd.b.metrics.development.cagr)}</span></div>
           <div class="kv"><span>투자금 부족 매수 불가</span><span>${cd.a.ledger_summary.skipped.unaffordable}건 / ${cd.b.ledger_summary.skipped.unaffordable}건</span></div>
           <div class="kv"><span>연 거래 횟수</span><span>${Math.round(cd.a.metrics.development.trades_per_year)} / ${Math.round(cd.b.metrics.development.trades_per_year)}</span></div>
-          <p class="muted">예측값 동일 시에도 투자금에 따라 매수 가능 종목과 성과 상이. 키움 계좌 연결 시 실제 보유 종목·현금 기준 산정(본 시연은 실계좌 미연결)</p>` : ''}</div>`;
+          <p class="muted">예측값 동일 시에도 투자금에 따라 매수 가능 종목과 성과 상이. 키움증권 계좌 연결 시 실제 보유 종목·현금 기준 산정(본 시연은 실계좌 미연결)</p>` : ''}</div>`;
   }
 
   function compareChart(items) {
