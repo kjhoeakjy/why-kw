@@ -188,16 +188,16 @@
     const s = S.spec, G = CAT.grid;
     const opt = (k, vals, lab) => `<select data-act="sel" data-k="${k}">${vals.map(v => `<option value="${v}" ${String(s[k]) === String(v) ? 'selected' : ''}>${lab(v)}</option>`).join('')}</select>`;
     return `<h2>연구 설정</h2>
-      <div class="card"><h3>1. Data & Feature</h3>
+      <div class="card"><h3>1. 데이터·변수</h3>
         <div class="chips">${Object.entries(CAT.feature_groups).map(([g, v]) => `<button class="chip" data-act="grp" data-v="${g}" aria-pressed="${s.groups.includes(g)}" ${g === 'price' ? 'data-lock="1"' : ''}>${v.label} (${v.features.length})</button>`).join('')}</div>
         <details><summary>변수 ${s.groups.reduce((n, g) => n + CAT.feature_groups[g].features.length, 0)}개</summary>
           <p class="sub">${s.groups.flatMap(g => CAT.feature_groups[g].features.map(f => esc(f.label))).join(', ')}</p></details>
         <p class="muted">미지원: ${Object.values(CAT.unavailable).map(esc).join(' / ')}</p></div>
-      <div class="card"><h3>2. Target & Model</h3>
+      <div class="card"><h3>2. 예측 대상·모델</h3>
         <label class="f">예측 대상(결정일 익일 시가 진입 후 N거래일 뒤 시가 청산 수익률)</label>${opt('h', CAT.horizons, v => v + '거래일')}
         <label class="f">알고리즘</label>${opt('algo', Object.keys(CAT.algorithms), v => v === 'ridge' ? 'Ridge 회귀(기준 모델)' : 'LightGBM')}
         <p class="muted">초매개변수 고정: ${esc(JSON.stringify(CAT.algorithms[s.algo]))} · 난수 시드 42 · 연 단위 전진 분석(Walk-forward), 최근 4년 학습, 예측 대상 종료일 기준 표본 분리(purge)</p></div>
-      <div class="card"><h3>3. Strategy & Portfolio</h3>
+      <div class="card"><h3>3. 전략·포트폴리오</h3>
         <label class="f">보유 종목 수</label>${opt('k', G.k, v => '상위 ' + v + '종목')}
         <label class="f">교체 규칙</label>${opt('buf', G.buf, v => v > 1 ? '상위 3배수 이내 보유 유지' : '매회 상위 종목으로 교체')}
         <label class="f">변동성 필터</label>${opt('vf', G.vf, v => v > 0 ? '60일 변동성 상위 30% 제외' : '없음')}
