@@ -38,6 +38,27 @@ const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malg
   T(s, '키움증권 신입사원 22기 김연주', { x: M, y: 6.3, w: 6, h: 0.3, fontSize: SM, color: C.accent4 });
   s.addNotes('개인의 투자 기준으로 투자 AI를 학습·검증·개선하는 서비스 제안입니다.');
 
+  // 배경
+  s = pres.addSlide({ masterName: 'Light', sectionTitle: '제안' });
+  s.addText('제안 배경', { placeholder: 'title' });
+  const gw = (W - 2 * M - 0.6) / 3;
+  [['경험', '개인 투자 AI 직접 학습', '자동 매수 · 매도 운용'], ['전망', '개인 전용 투자 AI 수요 증가', 'AI 발전에 따른 확대 예상'], ['제안', '누구나 본인의 투자 AI 학습', '나만의 AI를 키움']].forEach(([k, t, d], i) => {
+    const x = M + i * (gw + 0.3), dark = i === 2;
+    box(s, x, 2.0, gw, 1.9, `배경 ${i + 1}`, dark);
+    T(s, k, { x: x + 0.3, y: 2.25, w: gw - 0.6, h: 0.26, fontSize: SM, bold: true, color: dark ? C.accent4 : C.accent2 });
+    T(s, t, { x: x + 0.3, y: 2.7, w: gw - 0.6, h: 0.36, fontSize: 16, bold: true, color: dark ? C.background1 : C.text1 });
+    T(s, d, { x: x + 0.3, y: 3.2, w: gw - 0.6, h: 0.28, fontSize: 12, color: dark ? C.accent4 : C.text2 });
+  });
+  T(s, '개인이 직접 구축할 때 필요한 작업', { x: M, y: 4.45, w: 6, h: 0.26, fontSize: SM, color: C.text2 });
+  const jw = (W - 2 * M - 0.9) / 4;
+  [['데이터 수집 · 정제', '항목 선택'], ['모델 학습', '자동 학습'], ['검증 환경 구축', '자동 검증'], ['주문 연동 개발', '계좌 연계']].forEach(([a, b2], i) => {
+    const x = M + i * (jw + 0.3);
+    rule(s, x, 4.85, jw, `작업 구분선 ${i + 1}`, '0A0A0A');
+    T(s, a, { x, y: 5.0, w: jw, h: 0.3, fontSize: 14, bold: true });
+    T(s, '서비스 제공: ' + b2, { x, y: 5.4, w: jw, h: 0.26, fontSize: SM, color: C.accent1 });
+  });
+  s.addNotes('본 제안은 개인 경험에서 출발하였습니다. 발표자는 직접 학습시킨 투자 AI로 자동 매수·매도를 운용한 경험이 있습니다. AI가 발전할수록 개인 전용 투자 AI에 대한 수요가 증가할 것으로 예상하였으며 해당 전망은 발표자의 판단입니다. 개인이 직접 구축하려면 데이터 수집, 모델 학습, 검증 환경, 주문 연동 개발이 필요합니다. 본 제안은 해당 작업을 서비스가 대신 수행하여 누구나 본인의 투자 AI를 학습시킬 수 있도록 하는 것입니다.');
+
   // 2 서비스 설명
   s = pres.addSlide({ masterName: 'Light', sectionTitle: '제안' });
   s.addText('타 증권사 고객이 키움을 선택할 새로운 이유', { placeholder: 'title' });
@@ -77,24 +98,16 @@ const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malg
     T(s, v, { x, y: y + 0.5, w: hw, h: 0.25, fontSize: SM, color: C.text2, align: 'center' });
   });
   const cx2 = 9.0, cw2 = W - M - cx2;
-  T(s, '유형별 고객 역할', { x: cx2, y: dy - 0.3, w: cw2, h: 0.25, fontSize: SM, color: C.text2 });
-  [['AI 시그널', '정보 확인'], ['로보어드바이저', '운용 위임'], ['조건검색', '조건 설정'], ['전략 제작 플랫폼', '규칙 조합·검증'], ['나만의 AI를 키움', '모델 학습·개선']].forEach(([k, v], i) => {
-    const y = dy + 0.1 + i * 0.44;
-    rule(s, cx2, y - 0.1, cw2, `유형 구분선 ${i + 1}`, i ? 'D0D0D0' : '0A0A0A');
-    T(s, k, { x: cx2, y, w: cw2, h: 0.26, fontSize: 12, bold: i === 4 });
-    T(s, v, { x: cx2, y, w: cw2, h: 0.26, fontSize: 12, bold: i === 4, color: i === 4 ? C.text1 : C.text2, align: 'right' });
-  });
-  rule(s, cx2, dy + 5 * 0.44, cw2, '유형 하단선');
-  const ey = dy + 2.65;
+  const ey = dy;
   T(s, '도입 효과', { x: cx2, y: ey - 0.3, w: cw2, h: 0.25, fontSize: SM, color: C.accent2, bold: true });
   [['유입', '계좌 개설 전 체험 경로'], ['전환', '계좌 연계 기능 한정 제공'], ['잔류', '학습 모델·실험 기록 축적'], ['비용', '기존 기능 재구성'], ['연계', '키우Me·조건검색·API']].forEach(([k, v], i) => {
-    const y = ey + 0.1 + i * 0.36;
-    rule(s, cx2, y - 0.1, cw2, `효과 구분선 ${i + 1}`, i ? 'D0D0D0' : 'D6006F');
-    T(s, k, { x: cx2, y, w: 1.2, h: 0.26, fontSize: 12, bold: true });
-    T(s, v, { x: cx2 + 1.0, y, w: cw2 - 1.0, h: 0.26, fontSize: 12, color: C.text2, align: 'right' });
+    const y = ey + 0.12 + i * 0.72;
+    rule(s, cx2, y - 0.12, cw2, `효과 구분선 ${i + 1}`, i ? 'D0D0D0' : 'D6006F');
+    T(s, k, { x: cx2, y: y + 0.08, w: 1.2, h: 0.28, fontSize: 13, bold: true });
+    T(s, v, { x: cx2 + 1.0, y: y + 0.08, w: cw2 - 1.0, h: 0.28, fontSize: 12, color: C.text2, align: 'right' });
   });
-  rule(s, cx2, ey + 5 * 0.36, cw2, '효과 하단선');
-  s.addNotes('키움증권은 조건검색, 성과검증, API로 개인 투자자의 전략 개발 환경을 제공해 왔습니다. 본 제안은 해당 기반에 개인 모델 학습·검증·개선 기능을 결합한 것이며 코딩 경험이 없는 고객도 대상에 포함합니다. 유형 비교는 일반 기능 기준이며 개별 경쟁사의 기능 범위와 상이할 수 있습니다. 도입 효과는 다음과 같습니다. 계좌 개설 전 체험이 타사 고객의 유입 경로가 됩니다. 자동 주문과 운용 보고서를 계좌 보유 고객에 한정하여 계좌 개설과 거래로 전환합니다. 학습 모델과 실험 기록이 키움에 축적되어 이탈 유인이 감소합니다. 기존 기능의 재구성이므로 신규 개발 범위가 제한적입니다. 키우Me, 조건검색, API 등 기존 서비스와 연계가 가능합니다. NH투자증권 젠포트 DIY 등 규칙 조합형 전략 제작 서비스는 기존에 존재하며 본 제안의 차이는 개인별 예측 모델 학습, 계좌 개설 전 체험, 요청 기반 개선 판정입니다. 효과의 크기는 측정 전이며 수치는 제시하지 않습니다.');
+  rule(s, cx2, ey + 5 * 0.72, cw2, '효과 하단선');
+  s.addNotes('키움증권은 조건검색, 성과검증, API로 개인 투자자의 전략 개발 환경을 제공해 왔습니다. 본 제안은 해당 기반에 개인 모델 학습·검증·개선 기능을 결합한 것이며 코딩 경험이 없는 고객도 대상에 포함합니다. 도입 효과는 다음과 같습니다. 계좌 개설 전 체험이 타사 고객의 유입 경로가 됩니다. 자동 주문과 운용 보고서를 계좌 보유 고객에 한정하여 계좌 개설과 거래로 전환합니다. 학습 모델과 실험 기록이 키움에 축적되어 이탈 유인이 감소합니다. 기존 기능의 재구성이므로 신규 개발 범위가 제한적입니다. 키우Me, 조건검색, API 등 기존 서비스와 연계가 가능합니다. NH투자증권 젠포트 DIY 등 규칙 조합형 전략 제작 서비스는 기존에 존재하며 본 제안의 차이는 개인별 예측 모델 학습, 계좌 개설 전 체험, 요청 기반 개선 판정입니다. 효과의 크기는 측정 전이며 수치는 제시하지 않습니다.');
 
   // 5 Mission 2 + QR
   s = pres.addSlide({ masterName: 'Light', sectionTitle: '제안' });
