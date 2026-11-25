@@ -65,14 +65,14 @@ const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malg
   T(s, '고객이 선택한 투자 기준으로 개인 전용 AI를 학습하고 실제 데이터로 검증·개선하는 서비스', { x: M, y: 1.72, w: W - 2 * M, h: 0.32, fontSize: 15, bold: true });
   T(s, '대상: 투자 기준은 있으나 검증 수단이 없는 타사 일반 투자자', { x: M, y: 2.1, w: W - 2 * M, h: 0.26, fontSize: SM, color: C.text2 });
   const cw = (W - 2 * M) / 4, fph = 3.4, fpw = fph / 2;
-  [['01', '투자 기준 선택', '일반 · 고급 설정 중 선택', 'f1-set.png'], ['02', '개인 AI 학습 · 검증', '실제 과거 시세 · 거래 비용 반영', 'f2-home.png'], ['03', '요청 기반 개선', '후보 비교 · 채택 판정', 'f3-opt.png'], ['04', '키움 계좌 연계', '자동 주문 · 운용 보고서(설계안)', 'f4-link.png']].forEach(([n, t, d, img], i) => {
+  [['01', '투자 기준 선택', '일반 · 고급 설정 중 선택', 'f1-set.png'], ['02', '개인 AI 학습 · 검증', '실제 과거 시세 · 거래 비용 반영', 'f2-home.png'], ['03', '요청 기반 개선', '후보 비교 · 채택 판정', 'f3-opt.png'], ['04', '키움증권 계좌 연계', '자동 주문 · 운용 보고서(설계안)', 'f4-link.png']].forEach(([n, t, d, img], i) => {
     const x = M + i * cw;
     T(s, n, { x, y: 2.62, w: 0.4, h: 0.26, fontSize: SM, color: C.accent2, bold: true });
     T(s, t, { x: x + 0.4, y: 2.58, w: cw - 0.5, h: 0.3, fontSize: 14, bold: true });
     T(s, d, { x: x + 0.4, y: 2.9, w: cw - 0.5, h: 0.24, fontSize: 10, color: C.text2 });
     phone(s, img, x + 0.4, 3.28, fph, t + ' 화면');
   });
-  s.addNotes('본 제안은 고객이 선택한 투자 기준으로 개인 전용 AI를 학습하는 서비스입니다. 고객은 중시하는 정보와 보유 기간을 선택하며 고급 설정에서는 운용 방식, 회피 조건, 우선 목표를 추가로 지정합니다. 서비스는 해당 기준으로 예측 모델을 학습하고 실제 과거 시세에 거래 비용을 반영하여 검증합니다. 고객이 손실 축소 등 개선 방향을 요청하면 후보를 비교하고 채택 여부를 판정합니다. 키움 계좌 개설 고객에게는 자동 주문과 운용 보고서를 제공하며 해당 기능은 준법 검토가 필요한 설계안입니다. 대상 고객은 가설이며 인터뷰 결과가 아닙니다.');
+  s.addNotes('본 제안은 고객이 선택한 투자 기준으로 개인 전용 AI를 학습하는 서비스입니다. 고객은 중시하는 정보와 보유 기간을 선택하며 고급 설정에서는 운용 방식, 회피 조건, 우선 목표를 추가로 지정합니다. 서비스는 해당 기준으로 예측 모델을 학습하고 실제 과거 시세에 거래 비용을 반영하여 검증합니다. 고객이 손실 축소 등 개선 방향을 요청하면 후보를 비교하고 채택 여부를 판정합니다. 키움증권 계좌 개설 고객에게는 자동 주문과 운용 보고서를 제공하며 해당 기능은 준법 검토가 필요한 설계안입니다. 대상 고객은 가설이며 인터뷰 결과가 아닙니다.');
 
   // 3 Why Kiwoom
   s = pres.addSlide({ masterName: 'Light', sectionTitle: '제안' });
@@ -134,7 +134,7 @@ const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malg
     T(s, k, { x: tx, y, w: tw, h: 0.28, fontSize: 13, bold: true, color: i === 2 ? C.accent2 : C.text1 });
     T(s, v, { x: tx, y: y + 0.3, w: tw, h: 0.26, fontSize: SM, color: C.text2 });
   });
-  s.addNotes('투자 콘텐츠 제작자와 기존 고객이 연구 설정을 공유하면 수신자는 계좌 개설 전 본인 조건으로 재학습합니다. 수익률, 종목, 개인 자산 정보는 공유 대상에서 제외합니다. 인증과 계좌 개설 절차는 체험 이후 단계에 배치합니다. 체험 범위는 과거 데이터 검증으로 한정하며 자동 주문과 운용 보고서는 키움 계좌 개설 고객에 한정하여 제공합니다. 자동 주문은 채택 가능 판정 모델, 주문 한도, 주문 전 고객 승인을 조건으로 하며 투자일임 해당 여부에 대한 준법 검토가 필요합니다. 측정 지표는 링크 접속률, 첫 학습 완료율, 앱 설치율, 계좌 개설 완료율, 30일 재방문율입니다.');
+  s.addNotes('투자 콘텐츠 제작자와 기존 고객이 연구 설정을 공유하면 수신자는 계좌 개설 전 본인 조건으로 재학습합니다. 수익률, 종목, 개인 자산 정보는 공유 대상에서 제외합니다. 인증과 계좌 개설 절차는 체험 이후 단계에 배치합니다. 체험 범위는 과거 데이터 검증으로 한정하며 자동 주문과 운용 보고서는 키움증권 계좌 개설 고객에 한정하여 제공합니다. 자동 주문은 채택 가능 판정 모델, 주문 한도, 주문 전 고객 승인을 조건으로 하며 투자일임 해당 여부에 대한 준법 검토가 필요합니다. 측정 지표는 링크 접속률, 첫 학습 완료율, 앱 설치율, 계좌 개설 완료율, 30일 재방문율입니다.');
 
   // 4 PoC
   s = pres.addSlide({ masterName: 'Light', sectionTitle: '제안' });
@@ -146,24 +146,24 @@ const THEME = { name: 'Mono', headFontFace: 'Malgun Gothic', bodyFontFace: 'Malg
   T(s, '사전 계산 결과 조회 방식', { x: M, y: qy + q + 0.36, w: q, h: 0.25, fontSize: 9, color: C.text2, align: 'center' });
   const sx = 3.75;
   T(s, 'PoC 규모', { x: sx, y: 1.9, w: 2, h: 0.25, fontSize: SM, color: C.text2 });
-  [['629만 행', '국내주식 일별 시세'], ['20개', '학습 모델'], ['640건', '설정 조합별 검증']].forEach(([n, l], i) => {
+  [['629만 행', '국내주식 일별 시세'], ['32개', '학습 모델'], ['1,024건', '설정 조합별 검증']].forEach(([n, l], i) => {
     const y = 2.25 + i * 1.05;
     T(s, n, { x: sx, y, w: 2.2, h: 0.45, fontSize: 22, bold: true, color: C.accent1 });
     T(s, l, { x: sx, y: y + 0.48, w: 2.2, h: 0.25, fontSize: SM, color: C.text2 });
   });
   const cx = 6.3, cw4 = W - M - cx;
-  T(s, '설정 조합 640건의 연 수익률 분포(건)', { x: cx + 0.1, y: 1.9, w: 5, h: 0.25, fontSize: SM, color: C.text2 });
-  s.addChart(pres.charts.BAR, [{ name: '건수', labels: ['-20% 미만', '-20~-10%', '-10~0%', '0~10%', '10~20%', '20% 이상'], values: [22, 96, 320, 167, 28, 7] }],
+  T(s, '설정 조합 1,024건의 연 수익률 분포(건)', { x: cx + 0.1, y: 1.9, w: 5, h: 0.25, fontSize: SM, color: C.text2 });
+  s.addChart(pres.charts.BAR, [{ name: '건수', labels: ['-20% 미만', '-20~-10%', '-10~0%', '0~10%', '10~20%', '20% 이상'], values: [29, 169, 515, 244, 49, 18] }],
     { x: cx, y: 2.15, w: cw4, h: 3.0, barDir: 'col', chartColors: ['16245E'], showLegend: false, showValue: true, dataLabelFormatCode: '0', dataLabelPosition: 'outEnd', dataLabelFontSize: 10, dataLabelFontFace: '+mn-lt', dataLabelColor: '0A0A0A',
       catAxisLabelFontSize: 10, catAxisLabelFontFace: '+mn-lt', catAxisLabelColor: '0A0A0A', valAxisHidden: true, valGridLine: { style: 'none' }, catGridLine: { style: 'none' },
       barGapWidthPct: 50, altText: '설정 조합별 연 수익률 분포 막대 차트', objectName: '수익률 분포 차트' });
-  [['최저', '-39.6%'], ['중앙값', '-2.9%'], ['최고', '+29.2%'], ['수익 구간', '201건(31%)']].forEach(([k, v], i) => {
+  [['최저', '-39.6%'], ['중앙값', '-2.8%'], ['최고', '+31.8%'], ['수익 구간', '310건(30%)']].forEach(([k, v], i) => {
     const x = cx + 0.1 + i * 1.5;
     T(s, k, { x, y: 5.3, w: 1.4, h: 0.22, fontSize: 10, color: C.text2 });
     T(s, v, { x, y: 5.55, w: 1.4, h: 0.3, fontSize: 13, bold: true });
   });
   T(s, '검증 구간 2019~2024, 거래 비용 반영 실측  |  성과 악화 후보는 채택 보류 판정  |  출처: KRX 일별 시세(FinanceData/marcap)', { x: M, y: 6.4, w: W - 2 * M, h: 0.3, fontSize: 9, color: C.text2 });
-  s.addNotes('QR 시연은 사전 학습·검증 결과를 조회하는 방식이며 실제 서비스가 아닙니다. PoC의 목적은 구현 가능성 확인입니다. 실제 시세 629만 행으로 모델 20개를 학습하고 설정 조합 640건을 검증하였습니다. 조합별 연 수익률은 최저 -39.6%, 최고 +29.2%, 중앙값 -2.9%이며 수익 구간은 201건입니다. 고객의 선택이 결과에 반영된다는 근거입니다. 성과가 악화된 개선 후보는 채택 보류로 판정하며 손실 수치는 조정하지 않았습니다. 동일 기간 코스피 대용 지수(시가총액 가중 산출)는 연 +2.9%입니다.');
+  s.addNotes('QR 시연은 사전 학습·검증 결과를 조회하는 방식이며 실제 서비스가 아닙니다. PoC의 목적은 구현 가능성 확인입니다. 실제 시세 629만 행으로 모델 32개를 학습하고 설정 조합 1,024건을 검증하였습니다. 조합별 연 수익률은 최저 -39.6%, 최고 +31.8%, 중앙값 -2.8%이며 수익 구간은 310건입니다. 고객의 선택이 결과에 반영된다는 근거입니다. 성과가 악화된 개선 후보는 채택 보류로 판정하며 손실 수치는 조정하지 않았습니다. 동일 기간 코스피 대용 지수(시가총액 가중 산출)는 연 +2.9%입니다.');
 
   await pres.writeFile({ fileName: OUT });
   await applyTheme(OUT, THEME);
