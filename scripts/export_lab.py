@@ -115,14 +115,18 @@ def add_real_features(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
 
 EXT_GROUPS = {"analyst": ["rep_cnt_60", "tp_up", "tp_rev_120"],
               "fund": ["ep", "bp", "sp", "roe", "opm", "debt", "sales_yoy"],
-              "div": ["dy"]}
+              "div": ["dy"],
+              "event": ["ev_buyback", "ev_dilute", "ev_contract", "ev_ir", "ev_legal"]}
 EXT_LABELS = {"rep_cnt_60": "최근 60일 애널리스트 보고서 수", "tp_up": "목표주가 대비 상승 여력(최근 120일 평균)", "tp_rev_120": "목표주가 변경률(증권사별 직전 대비, 최근 120일)",
               "ep": "이익수익률(최근 4분기 순이익/시가총액)", "bp": "순자산/시가총액", "sp": "매출액(최근 4분기)/시가총액", "roe": "자기자본이익률(최근 4분기)",
               "opm": "영업이익률(최근 4분기)", "debt": "부채비율", "sales_yoy": "매출액 전년 동기 대비 증감률(누적)",
-              "dy": "배당수익률(최근 사업연도 주당 현금배당금)"}
-EXT_GROUP_LABELS = {"analyst": "애널리스트 보고서", "fund": "실적·재무", "div": "배당"}
+              "dy": "배당수익률(최근 사업연도 주당 현금배당금)",
+              "ev_buyback": "최근 120일 자기주식 취득 공시 건수", "ev_dilute": "최근 120일 유상증자·주식 관련 사채 발행 공시 건수", "ev_contract": "최근 60일 공급계약 체결 공시 건수",
+              "ev_ir": "최근 60일 기업설명회 개최 공시 건수", "ev_legal": "최근 250일 소송·횡령·배임 공시 건수"}
+EXT_GROUP_LABELS = {"analyst": "애널리스트 보고서", "fund": "실적·재무", "div": "배당", "event": "주요 공시 유형"}
 EXT_SOURCES = {"analyst": "애널리스트 종목 보고서 투자의견·목표주가(네이버 페이 증권 리서치)", "fund": "분기·반기·사업보고서 주요 계정(DART 전자공시 Open API, 접수일 다음 거래일부터 반영)",
-               "div": "사업보고서 배당에 관한 사항(DART 전자공시 Open API, 접수일 다음 거래일부터 반영)"}
+               "div": "사업보고서 배당에 관한 사항(DART 전자공시 Open API, 접수일 다음 거래일부터 반영)",
+               "event": "공시 제목 유형 분류(네이버 금융, 15시 30분 이후 공시는 다음 거래일부터 반영)"}
 
 
 def _first_on_or_after(dates: np.ndarray, d: np.ndarray, strict=False) -> np.ndarray:
@@ -217,6 +221,23 @@ def add_ext_features(df: pd.DataFrame) -> tuple[pd.DataFrame, list]:
         df = df.drop(columns=["dps", "dps_adj", "_d_age"])
         have.append("div")
         print("div", len(v), flush=True)
+    # 공시 유형: 제목 기준 분류. 장 마감(15:30) 이후 공시는 다음 거래일 자료로 처리
+    ds = pd.read_parquet(EXT / "disclosures.parquet").rename(columns={"code": "Code"})
+    s = ds.dt.astype(str)
+    ds = ds[s.str[:4] >= "2017"].copy()
+    s = ds.dt.astype(str)
+    day = pd.to_datetime(s.str[:8], format="%Y%m%d").values
+    late = (s.str[8:12] >= "1530").values
+    ds["Date"] = np.where(late, _first_on_or_after(tdays, day, strict=True), _first_on_or_after(tdays, day))
+    ds = ds.dropna(subset=["Date"])
+    has = df.Code.isin(set(ds.Code.unique()))
+    for name, pat, n in (("ev_buyback", "자기주식 ?취득|자기주식취득 ?신탁계약 ?체결", 120), ("ev_dilute", "유상증자 ?결정|전환사채권 ?발행결정|신주인수권부사채권 ?발행결정|교환사채권 ?발행결정", 120),
+                         ("ev_contract", "단일판매ㆍ공급계약 ?체결", 60), ("ev_ir", "기업설명회", 60), ("ev_legal", "소송|횡령|배임", 250)):
+        c = ds[ds.title.str.contains(pat, regex=True)].groupby(key).size().rename("_e").reset_index()
+        df = df.merge(c, on=key, how="left")
+        df[name] = _roll(df, df["_e"].fillna(0.0), n).where(has)
+        df = df.drop(columns="_e")
+    have.append("event")
     return df, have
 
 

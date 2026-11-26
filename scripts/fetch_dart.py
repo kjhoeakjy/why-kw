@@ -4,6 +4,8 @@
 - 배당: 사업보고서 배당에 관한 사항(alotMatter), 보통주 주당 현금배당금.
 - 시점: 접수번호 앞 8자리(접수일)를 공개일로 기록하고, 학습 변수는 접수일 다음 거래일부터 사용한다.
 - 사용: python scripts/fetch_dart.py [대상 종목 목록 json]  (기본: web/data/lab/meta.json 의 codes). 중단 후 재실행 시 이어받음."""
+import concurrent.futures as cf
+import hashlib
 import io
 import json
 import os
@@ -28,12 +30,12 @@ CACHE = EXT / "dart_cache"
 
 
 def call(name: str, **params) -> dict:
-    ck = CACHE / (name + "_" + "_".join(f"{k}-{v}" for k, v in sorted(params.items()))[:180].replace(",", "") + ".json")
+    ck = CACHE / (name + "_" + hashlib.sha1(json.dumps(params, sort_keys=True).encode()).hexdigest()[:20] + ".json")
     if ck.exists():
         return json.loads(ck.read_text())
     for i in range(5):
         try:
-            r = S.get(API + name, params={"crtfc_key": KEY, **params}, timeout=30)
+            r = requests.get(API + name, params={"crtfc_key": KEY, **params}, timeout=300)
             d = r.json()
             if d.get("status") in ("000", "013"):          # 013: 자료 없음
                 ck.write_text(json.dumps(d, ensure_ascii=False))
@@ -51,7 +53,7 @@ def corp_codes() -> dict:
     p = EXT / "dart_corpcode.json"
     if p.exists():
         return json.loads(p.read_text())
-    r = S.get(API + "corpCode.xml", params={"crtfc_key": KEY}, timeout=60)
+    r = S.get(API + "corpCode.xml", params={"crtfc_key": KEY}, timeout=900)
     z = zipfile.ZipFile(io.BytesIO(r.content))
     root = ET.fromstring(z.read(z.namelist()[0]))
     m = {}
@@ -85,18 +87,25 @@ def main():
     ids = sorted(corp.values())
     rows = []
     this_year = pd.Timestamp.today().year
-    for y in range(2018, this_year + 1):
-        for rc, q in REPRT.items():
-            for i in range(0, len(ids), 100):
-                d = call("fnlttMultiAcnt.json", corp_code=",".join(ids[i:i + 100]), bsns_year=str(y), reprt_code=rc)
-                for x in d.get("list", []):
-                    k = ACCTS.get(x.get("account_nm", "").replace(" ", ""))
-                    if not k:
-                        continue
-                    rows.append({"code": x.get("stock_code") or rev.get(x.get("corp_code")), "year": y, "q": q, "fs": x.get("fs_div"), "acct": k,
-                                 "rcept": x.get("rcept_no", "")[:8], "cur": amt(x.get("thstrm_amount")), "cur_cum": amt(x.get("thstrm_add_amount")),
-                                 "prev": amt(x.get("frmtrm_amount")), "prev_cum": amt(x.get("frmtrm_add_amount"))})
-            print("fin", y, rc, len(rows), flush=True)
+    jobs = [(y, rc, q, i) for y in range(2018, this_year + 1) for rc, q in REPRT.items() for i in range(0, len(ids), 100)]
+
+    def fin_one(job):
+        y, rc, q, i = job
+        d = call("fnlttMultiAcnt.json", corp_code=",".join(ids[i:i + 100]), bsns_year=str(y), reprt_code=rc)
+        out = []
+        for x in d.get("list", []):
+            k = ACCTS.get(x.get("account_nm", "").replace(" ", ""))
+            if k:
+                out.append({"code": x.get("stock_code") or rev.get(x.get("corp_code")), "year": y, "q": q, "fs": x.get("fs_div"), "acct": k,
+                            "rcept": x.get("rcept_no", "")[:8], "cur": amt(x.get("thstrm_amount")), "cur_cum": amt(x.get("thstrm_add_amount")),
+                            "prev": amt(x.get("frmtrm_amount")), "prev_cum": amt(x.get("frmtrm_add_amount"))})
+        return out
+
+    with cf.ThreadPoolExecutor(16) as ex:
+        for n, r in enumerate(ex.map(fin_one, jobs)):
+            rows += r
+            if n % 20 == 0:
+                print("fin", n, len(jobs), len(rows), flush=True)
     fin = pd.DataFrame(rows)
     fin = fin[fin.code.notna()]
     # 연결(CFS) 우선
@@ -105,16 +114,31 @@ def main():
     fin.to_parquet(EXT / "dart_fin.parquet", index=False)
     print("saved fin", len(fin), flush=True)
 
+    # 배당: 사업보고서 1건이 당기·전기·전전기 값을 함께 제공하므로 3개 연도 간격으로 호출. 공개일은 해당 사업연도 사업보고서 접수일.
+    ann = fin[fin.q == 4].groupby(["code", "year"]).rcept.max().to_dict()
+    last = this_year - 1
+    calls = sorted({y for y in range(last, 2019, -3)} | {2020})
     drows = []
-    for n, (code, cid) in enumerate(sorted(corp.items())):
-        for y in range(2018, this_year):
+
+    def one(item):
+        code, cid = item
+        out = {}
+        for y in calls:
             d = call("alotMatter.json", corp_code=cid, bsns_year=str(y), reprt_code="11011")
             for x in d.get("list", []):
                 if "현금배당금" in x.get("se", "") and "주당" in x.get("se", "") and (x.get("stock_knd") or "보통주").startswith("보통"):
-                    drows.append({"code": code, "year": y, "rcept": x.get("rcept_no", "")[:8], "dps": amt(x.get("thstrm"))})
-        if n % 100 == 0:
-            print("div", n, len(corp), flush=True)
-    div = pd.DataFrame(drows).drop_duplicates(["code", "year"])
+                    for k, yy in (("lwfr", y - 2), ("frmtrm", y - 1), ("thstrm", y)):      # 해당 연도 보고서의 당기 값을 우선
+                        v = amt(x.get(k))
+                        if yy >= 2018 and (k == "thstrm" or yy not in out):
+                            out[yy] = 0.0 if str(x.get(k)).strip() == "-" else v
+        return [{"code": code, "year": yy, "rcept": ann.get((code, yy)), "dps": v} for yy, v in out.items()]
+
+    with cf.ThreadPoolExecutor(16) as ex:
+        for n, r in enumerate(ex.map(one, sorted(corp.items()))):
+            drows += r
+            if n % 200 == 0:
+                print("div", n, len(corp), flush=True)
+    div = pd.DataFrame(drows).dropna(subset=["rcept", "dps"]).drop_duplicates(["code", "year"])
     div.to_parquet(EXT / "dart_div.parquet", index=False)
     print("saved div", len(div), flush=True)
 
