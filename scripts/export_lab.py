@@ -113,6 +113,134 @@ def add_real_features(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     return df.drop(columns=["frgn", "inst", "indiv", "dn", "al"]), {"ind_names": ind_names, "ind_of": ind_of}
 
 
+EXT_GROUPS = {"analyst": ["rep_cnt_60", "tp_up", "tp_rev_120"],
+              "fund": ["ep", "bp", "sp", "roe", "opm", "debt", "sales_yoy"],
+              "div": ["dy"],
+              "event": ["ev_buyback", "ev_dilute", "ev_contract", "ev_ir", "ev_legal"]}
+EXT_LABELS = {"rep_cnt_60": "최근 60일 애널리스트 보고서 수", "tp_up": "목표주가 대비 상승 여력(최근 120일 평균)", "tp_rev_120": "목표주가 변경률(증권사별 직전 대비, 최근 120일)",
+              "ep": "이익수익률(최근 4분기 순이익/시가총액)", "bp": "순자산/시가총액", "sp": "매출액(최근 4분기)/시가총액", "roe": "자기자본이익률(최근 4분기)",
+              "opm": "영업이익률(최근 4분기)", "debt": "부채비율", "sales_yoy": "매출액 전년 동기 대비 증감률(누적)",
+              "dy": "배당수익률(최근 사업연도 주당 현금배당금)",
+              "ev_buyback": "최근 120일 자기주식 취득 공시 건수", "ev_dilute": "최근 120일 유상증자·주식 관련 사채 발행 공시 건수", "ev_contract": "최근 60일 공급계약 체결 공시 건수",
+              "ev_ir": "최근 60일 기업설명회 개최 공시 건수", "ev_legal": "최근 250일 소송·횡령·배임 공시 건수"}
+EXT_GROUP_LABELS = {"analyst": "애널리스트 보고서", "fund": "실적·재무", "div": "배당", "event": "주요 공시 유형"}
+EXT_SOURCES = {"analyst": "애널리스트 종목 보고서 투자의견·목표주가(네이버 페이 증권 리서치)", "fund": "분기·반기·사업보고서 주요 계정(DART 전자공시 Open API, 접수일 다음 거래일부터 반영)",
+               "div": "사업보고서 배당에 관한 사항(DART 전자공시 Open API, 접수일 다음 거래일부터 반영)",
+               "event": "공시 제목 유형 분류(네이버 금융, 15시 30분 이후 공시는 다음 거래일부터 반영)"}
+
+
+def _first_on_or_after(dates: np.ndarray, d: np.ndarray, strict=False) -> np.ndarray:
+    i = np.searchsorted(dates, d, "right" if strict else "left")
+    out = np.full(len(d), np.datetime64("NaT"), "datetime64[ns]")
+    ok = i < len(dates)
+    out[ok] = dates[i[ok]]
+    return out
+
+
+def _roll(df, s, n, fn="sum", minp=1):
+    return s.groupby(df.Code, sort=False).rolling(n, min_periods=minp).agg(fn).reset_index(level=0, drop=True)
+
+
+def add_ext_features(df: pd.DataFrame) -> tuple[pd.DataFrame, list]:
+    """애널리스트 보고서·DART 재무·배당. 수집 파일이 있는 자료만 변수로 추가(없는 자료는 변수 자체를 만들지 않음)."""
+    key = ["Code", "Date"]
+    tdays = np.sort(df.Date.unique())
+    df = df.sort_values(key).reset_index(drop=True)
+    adjf = df.adj_close / df.Close.where(df.Close > 0)                     # 수정주가 환산 계수
+    have = []
+    p = EXT / "research.parquet"
+    if p.exists():
+        rs = pd.read_parquet(p)
+        rs = rs[rs.code.isin(set(df.Code))].copy()
+        rs["Date"] = _first_on_or_after(tdays, pd.to_datetime(rs.date).values)
+        rs = rs.dropna(subset=["Date"]).rename(columns={"code": "Code"})
+        rs = rs.merge(df[key + ["Close"]].assign(af=adjf), on=key, how="left")
+        rs["goal_adj"] = rs.goal * rs.af
+        rs = rs.sort_values(["Code", "broker", "Date"])
+        prev = rs.groupby(["Code", "broker"]).goal_adj.shift(1)
+        pdt = rs.groupby(["Code", "broker"]).Date.shift(1)
+        rs["rev"] = (rs.goal_adj / prev - 1).where((rs.Date - pdt) <= pd.Timedelta(days=365))
+        dd = rs.groupby(key).agg(rn=("researchId", "size"), gs=("goal_adj", "sum"), gn=("goal_adj", "count"), vs=("rev", "sum"), vn=("rev", "count")).reset_index()
+        df = df.merge(dd, on=key, how="left")
+        for c in ("rn", "gs", "gn", "vs", "vn"):
+            df[c] = df[c].fillna(0.0)
+        df["rep_cnt_60"] = _roll(df, df.rn, 60)
+        gn = _roll(df, df.gn, 120)
+        df["tp_up"] = (_roll(df, df.gs, 120) / gn.where(gn > 0)) / df.adj_close - 1
+        vn = _roll(df, df.vn, 120)
+        df["tp_rev_120"] = _roll(df, df.vs, 120) / vn.where(vn > 0)
+        df.loc[df.Date < pd.Timestamp(rs.Date.min()) + pd.Timedelta(days=180), ["rep_cnt_60", "tp_up", "tp_rev_120"]] = np.nan
+        df = df.drop(columns=["rn", "gs", "gn", "vs", "vn"])
+        have.append("analyst")
+        print("analyst", len(rs), flush=True)
+    p = EXT / "dart_fin.parquet"
+    if p.exists():
+        f = pd.read_parquet(p)
+        is_ = f.acct.isin(["sales", "op", "ni"])
+        cum = np.where(f.q.isin([2, 3]) & f.cur_cum.notna(), f.cur_cum, f.cur)
+        pcum = np.where(f.q.isin([2, 3]) & f.prev_cum.notna(), f.prev_cum, f.prev)
+        f = f.assign(cum=cum, pcum=pcum)
+        ann = f[f.q == 4].set_index(["code", "year", "acct"]).cur
+        prev_ann = ann.reindex(pd.MultiIndex.from_arrays([f.code, f.year - 1, f.acct])).values
+        f["ttm"] = np.where(f.q == 4, f.cur, f.cum + prev_ann - f.pcum)
+        f["val"] = np.where(is_, f.ttm, f.cur)
+        w = f.pivot_table(index=["code", "year", "q"], values="val", columns="acct", aggfunc="first")
+        g = f[f.acct == "sales"].set_index(["code", "year", "q"])
+        w["sales_yoy"] = (g.cum / g.pcum.where(g.pcum > 0) - 1).reindex(w.index)
+        w["rcept"] = f.groupby(["code", "year", "q"]).rcept.max()
+        w = w.reset_index().dropna(subset=["rcept"])
+        w["Date"] = _first_on_or_after(tdays, pd.to_datetime(w.rcept, format="%Y%m%d").values, strict=True)
+        w = w.dropna(subset=["Date"]).rename(columns={"code": "Code"}).sort_values(["Code", "Date", "year", "q"]).drop_duplicates(key, keep="last")
+        cols = [c for c in ("sales", "op", "ni", "assets", "liab", "equity", "sales_yoy") if c in w]
+        df = df.merge(w[key + cols].add_prefix("_f_").rename(columns={"_f_Code": "Code", "_f_Date": "Date"}), on=key, how="left")
+        fc = ["_f_" + c for c in cols]
+        df["_f_age"] = df.Date.where(df["_f_" + cols[0]].notna() | df[fc].notna().any(axis=1))
+        df[fc + ["_f_age"]] = df.groupby("Code", sort=False)[fc + ["_f_age"]].ffill()
+        stale = (df.Date - df._f_age) > pd.Timedelta(days=400)
+        mc = df.Marcap.where(df.Marcap > 0)
+        eq = df.get("_f_equity")
+        df["ep"], df["bp"], df["sp"] = df.get("_f_ni") / mc, eq / mc, df.get("_f_sales") / mc
+        df["roe"] = df.get("_f_ni") / eq.where(eq > 0)
+        df["opm"] = df.get("_f_op") / df.get("_f_sales").where(df.get("_f_sales") > 0)
+        df["debt"] = df.get("_f_liab") / eq.where(eq > 0)
+        df["sales_yoy"] = df.get("_f_sales_yoy")
+        df.loc[stale, EXT_GROUPS["fund"]] = np.nan
+        df = df.drop(columns=fc + ["_f_age"])
+        have.append("fund")
+        print("fund", len(w), flush=True)
+    p = EXT / "dart_div.parquet"
+    if p.exists():
+        v = pd.read_parquet(p).dropna(subset=["dps"])
+        v["Date"] = _first_on_or_after(tdays, pd.to_datetime(v.rcept, format="%Y%m%d").values, strict=True)
+        v = v.dropna(subset=["Date"]).rename(columns={"code": "Code"}).sort_values(["Code", "Date", "year"]).drop_duplicates(key, keep="last")
+        df = df.merge(v[key + ["dps"]], on=key, how="left")
+        df["dps_adj"] = df.dps * adjf                                       # 공시 시점 주식 수 기준 배당금을 수정주가 기준으로 환산
+        df["_d_age"] = df.Date.where(df.dps.notna())
+        df[["dps_adj", "_d_age"]] = df.groupby("Code", sort=False)[["dps_adj", "_d_age"]].ffill()
+        df["dy"] = (df.dps_adj / df.adj_close).where((df.Date - df._d_age) <= pd.Timedelta(days=400))
+        df = df.drop(columns=["dps", "dps_adj", "_d_age"])
+        have.append("div")
+        print("div", len(v), flush=True)
+    # 공시 유형: 제목 기준 분류. 장 마감(15:30) 이후 공시는 다음 거래일 자료로 처리
+    ds = pd.read_parquet(EXT / "disclosures.parquet").rename(columns={"code": "Code"})
+    s = ds.dt.astype(str)
+    ds = ds[s.str[:4] >= "2017"].copy()
+    s = ds.dt.astype(str)
+    day = pd.to_datetime(s.str[:8], format="%Y%m%d").values
+    late = (s.str[8:12] >= "1530").values
+    ds["Date"] = np.where(late, _first_on_or_after(tdays, day, strict=True), _first_on_or_after(tdays, day))
+    ds = ds.dropna(subset=["Date"])
+    has = df.Code.isin(set(ds.Code.unique()))
+    for name, pat, n in (("ev_buyback", "자기주식 ?취득|자기주식취득 ?신탁계약 ?체결", 120), ("ev_dilute", "유상증자 ?결정|전환사채권 ?발행결정|신주인수권부사채권 ?발행결정|교환사채권 ?발행결정", 120),
+                         ("ev_contract", "단일판매ㆍ공급계약 ?체결", 60), ("ev_ir", "기업설명회", 60), ("ev_legal", "소송|횡령|배임", 250)):
+        c = ds[ds.title.str.contains(pat, regex=True)].groupby(key).size().rename("_e").reset_index()
+        df = df.merge(c, on=key, how="left")
+        df[name] = _roll(df, df["_e"].fillna(0.0), n).where(has)
+        df = df.drop(columns="_e")
+    have.append("event")
+    return df, have
+
+
 def real_products(days: pd.DatetimeIndex, mk: pd.DataFrame) -> tuple[np.ndarray, list]:
     """실제 ETF·미국 주식 일별 수익률(원화). 미국 주식은 직전 미국 장 종가에 당일 원/달러 환율 적용."""
     e = pd.read_csv(EXT / "study_etf_daily.csv.gz", dtype={"code": str, "date": str})
@@ -250,8 +378,9 @@ def main():
     mkt = rm["KOSPI"].dropna().pct_change().dropna()          # 실제 코스피 지수 일별 수익률
     panel = add_features(panel, mkt)
     panel, sect = add_real_features(panel)
-    groups = {**data.FEATURE_GROUPS, **NEW_GROUPS}
-    labels = {**data.FEATURE_LABELS, **NEW_LABELS}
+    panel, have = add_ext_features(panel)
+    groups = {**data.FEATURE_GROUPS, **NEW_GROUPS, **{g: EXT_GROUPS[g] for g in have}}
+    labels = {**data.FEATURE_LABELS, **NEW_LABELS, **EXT_LABELS}
     feats = [f for g in groups.values() for f in g]
     F = len(feats)
 
@@ -361,12 +490,12 @@ def main():
                        ("prod", prod_lr)] + list(drv.items()) + [("gram", gram)],
               "px": [("lr", lr_q), ("lo", lo_q)]}
     meta = {"days": [str(d.date()) for d in days], "dec": dec, "codes": codes, "names": [fr.names.get(c, c) for c in codes],
-            "features": feats, "feature_labels": labels, "groups": groups, "group_labels": GROUP_LABELS, "horizons": HS,
+            "features": feats, "feature_labels": labels, "groups": groups, "group_labels": {**GROUP_LABELS, **EXT_GROUP_LABELS}, "horizons": HS,
             "gram_years": years, "gram_width": W, "year_info": yinfo, "dev": [model.DEV_START, model.DEV_END], "final": [model.FINAL_START, model.FINAL_END],
             "snapshot": data.snapshot_id(), "arrays": {}, "lgb": {}, "products": prod_meta, "industries": sect["ind_names"], "derivs": drv_info,
             "sources": {"stock": "KRX 전종목 일별 시세(FinanceData/marcap)", "index": "코스피·코스닥 지수(네이버 금융)", "flow": "투자자별 순매수 2022-01~, 외국인 보유율 2019-01~(네이버 금융)",
                         "sector": "업종 79개·테마 265개 구성 종목(네이버 금융, 수집 시점 구성)", "disc": "공시 제목(네이버 금융)", "etf": "ETF 일별 시세(네이버 금융)",
-                        "deriv": "코스피200 선물·옵션 일별 시세(한국투자증권 API)", "us": "미국 주식·지수·환율 일별 시세(야후 파이낸스)"}}
+                        "deriv": "코스피200 선물·옵션 일별 시세(한국투자증권 API)", "us": "미국 주식·지수·환율 일별 시세(야후 파이낸스)", **{g: EXT_SOURCES[g] for g in have}}}
     for fn, lst in arrays.items():
         buf, off = b"", 0
         for name, arr in lst:

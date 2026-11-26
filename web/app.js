@@ -24,7 +24,8 @@
   const horizonLabel = h => ({ 5: '단기(약 1주)', 10: '약 2주', 20: '중기(약 1개월)', 60: '장기(약 3개월)' }[h]);
   const MYN = { '상위 3배수 이내 보유 유지': '보유 종목 교체 축소', '예측·보유 기간 20거래일': '보유 기간 연장(약 1개월)', '변동성·위험 변수 추가': '하락 위험 정보 추가', '변동성 상위 30% 종목 제외': '변동성 큰 종목 제외', '기업 규모 변수 추가': '기업 규모 정보 추가', '예측·보유 기간 60거래일': '보유 기간 연장(약 3개월)', '투자자별 수급 변수 추가': '투자자별 수급 정보 추가', '업종·테마 변수 추가': '업종·테마 정보 추가', '전체 변수 반영': '전체 정보 반영' };
   const cname = c => S.mode === 'my' ? (MYN[c] || c) : c;
-  const SHORT = { price: '가격 흐름', volume: '거래량', risk: '위험', size: '기업 규모', trend: '장기 추세', pattern: '급등·갭 이력', beta: '시장 민감도', age: '상장 경과', flow: '수급', sector: '업종·테마', disc: '공시' };
+  const SHORT = { price: '가격 흐름', volume: '거래량', risk: '위험', size: '기업 규모', trend: '장기 추세', pattern: '급등·갭 이력', beta: '시장 민감도', age: '상장 경과', flow: '수급', sector: '업종·테마', disc: '공시', analyst: '애널리스트 보고서', fund: '실적·재무', div: '배당', event: '공시 유형' };
+  const HAS = g => { const M = LM(); return !!(M && M.groups[g]); };
   const PRESET = { balanced: '수익성·위험 균형', return: '수익성 우선', low_risk: '낙폭 최소화', low_trading: '거래 횟수 최소화' };
   const aiTitle = s => { const x = s.groups.filter(g => g !== 'price'); return (x.length ? x.map(g => SHORT[g]).join('·') : '가격 흐름') + ' 중시 투자 AI'; };
   const verdict = (d, b) => {
@@ -164,7 +165,7 @@
   const stage = m => /^\[자료/.test(m) ? '학습 자료 수신' : /^\[설정/.test(m) ? '투자 기준 확인' : /재사용/.test(m) ? '기존 모델 확인' : /학습/.test(m) ? '모델 학습' : /가상 체결/.test(m) ? '가상 운용 검증' : /후보|연구 계획|제외/.test(m) ? '개선 후보 비교' : '계산 준비';
   const tabs = () => !S.mode ? '' : `<nav class="tabs"><div>${(S.mode === 'qs' ? [['create', '연구', 'set'], ['validate', '검증', 'chart'], ['optimize', '최적화', 'up'], ['versions', '버전', 'list']] : [['validate', '홈', 'home'], ['create', '설정', 'set'], ['optimize', '개선', 'up'], ['versions', '기록', 'list']])
     .map(([k, l, ic]) => `<button data-act="tab" data-v="${k}" aria-current="${S.tab === k}">${ICON[ic]}<span>${l}</span></button>`).join('')}</div></nav>`;
-  const disclosures = () => `<details class="disc"><summary>투자 유의 사항</summary><ul>${CAT.disclosures.map(d => `<li>${esc(d)}</li>`).join('')}<li>ETF·선물·옵션·미국 주식은 실제 일별 종가 기준이며 분배금, 선물·옵션 계약 단위와 증거금 미반영</li><li>과제 시연용 화면이며 키움증권의 실제 서비스가 아님</li></ul>
+  const disclosures = () => `<details class="disc"><summary>투자 유의 사항</summary><ul>${CAT.disclosures.map(d => `<li>${esc(d)}</li>`).join('')}<li>ETF·선물·옵션·미국 주식은 실제 일별 종가 기준이며 분배금, 선물·옵션 계약 단위와 증거금 미반영</li><li>과제 시연용 화면이며 키움증권의 실제 서비스가 아님</li></ul>${LM() && LM().sources ? `<p class="muted" style="margin-top:8px"><b>자료 출처</b></p><ul>${Object.values(LM().sources).map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
     데이터: ${esc(CAT.data.source)} · ${CAT.data.start}~${CAT.data.end}</details>`;
 
   function landing() {
@@ -190,7 +191,7 @@
         <div class="kv"><span>사용 데이터</span><span>실제 일별 시세 ${CAT.data.start.slice(0, 4)}~${CAT.data.end.slice(0, 7)}</span></div>
         <div class="kv"><span>이용 조건</span><span>계좌 개설 불필요, 주문 미연결</span></div>
         <div class="kv"><span>상품 범위</span><span>국내주식, 국내 ETF(채권·해외 지수·금·달러·레버리지·인버스·커버드콜), 미국 주식, 코스피200 선물·옵션</span></div>
-        <div class="kv"><span>학습 자료</span><span>시세, 투자자별 수급, 업종·테마, 공시·시장경보, 해외 지수·환율</span></div>
+        <div class="kv"><span>학습 자료</span><span>시세, 투자자별 수급, 업종·테마, 공시, 실적·재무, 배당, 애널리스트 보고서, 해외 지수·환율</span></div>
         <div class="kv"><span>시연 범위</span><span>설정 변경 시 화면에서 직접 학습·가상 운용</span></div></details></div>
       ${disclosures()}`;
   }
@@ -207,7 +208,9 @@
   const WT = { eq: '동일 비중', score: '점수 순위 비례', ivol: '변동성 역비례' };
   const BEL = [['상승 추세 종목 선호', { mom_60: 1, mom_120: 1, high252_ratio: 1 }, []], ['단기 낙폭 과대 종목 선호', { mom_5: -1, ma20_gap: -1 }, []],
     ['저변동 종목 선호', { vol_60: -1, downside_vol_60: -1 }, ['risk']], ['대형주 선호', { log_marcap: 1 }, ['size']], ['거래 활발 종목 선호', { turnover20: 1, log_amt20: 1 }, ['volume']],
-    ['외국인 순매수 종목 선호', { frgn_5: 1, frgn_20: 1 }, ['flow']], ['기관 순매수 종목 선호', { inst_5: 1, inst_20: 1 }, ['flow']], ['강세 업종 종목 선호', { ind_ret_20: 1 }, ['sector']]];
+    ['외국인 순매수 종목 선호', { frgn_5: 1, frgn_20: 1 }, ['flow']], ['기관 순매수 종목 선호', { inst_5: 1, inst_20: 1 }, ['flow']], ['강세 업종 종목 선호', { ind_ret_20: 1 }, ['sector']],
+    ['목표주가 상향 종목 선호', { tp_rev_120: 1 }, ['analyst']], ['이익 대비 저평가 종목 선호', { ep: 1, bp: 1 }, ['fund']], ['매출 성장 종목 선호', { sales_yoy: 1 }, ['fund']], ['고배당 종목 선호', { dy: 1 }, ['div']], ['자기주식 취득 종목 선호', { ev_buyback: 1 }, ['event']], ['증자·사채 발행 종목 회피', { ev_dilute: -1 }, ['event']]];
+  const belOk = b => b[2].every(HAS);
   const belOn = (s, m) => Object.entries(m).every(([f, v]) => (s.belief || {})[f] === v);
   const nameOf = c => { const M = LM(), i = M ? M.codes.indexOf(c) : -1; return i >= 0 ? M.names[i] : c; };
   const prodOf = id => { const M = LM(); return M ? M.products.find(p => p.id === id) : null; };
@@ -252,6 +255,8 @@
       { t: '시세·거래', wide: 1, items: [R('grp', '', 'price', '가격 흐름(필수)'), R('grp', '', 'volume', '거래량'), R('grp', '', 'risk', '하락 위험'), R('grp', '', 'size', '기업 규모'), R('grp', '', 'trend', '장기 추세', { b: 0 }), R('grp', '', 'pattern', '급등·갭 이력', { b: 0 }), R('grp', '', 'beta', '시장 민감도', { b: 0 }), R('grp', '', 'age', '상장 경과', { b: 0 })] },
       { t: '수급·업종·공시', wide: 1, items: [R('grp', '', 'flow', '투자자별 수급'), R('grp', '', 'sector', '업종·테마 동향'), R('grp', '', 'disc', '공시·시장경보')], extra: s => featBox(s),
         n: '외국인·기관·개인 순매수 2022년 이후, 외국인 보유율 2019년 이후 자료. 자료가 없는 기간과 종목은 해당 변수 미반영. 업종·테마는 수집 시점 구성 기준' },
+      { t: '실적·배당·보고서·공시 유형', wide: 1, items: [R('grp', '', 'fund', '실적·재무', { need: 'fund' }), R('grp', '', 'div', '배당', { need: 'div' }), R('grp', '', 'analyst', '애널리스트 보고서', { need: 'analyst' }), R('grp', '', 'event', '주요 공시 유형', { need: 'event' })],
+        n: '실적·재무·배당은 DART 정기보고서 접수일 다음 거래일부터 반영. 애널리스트 보고서는 투자의견·목표주가 기준(2018년 이후). 공시 유형은 공시 제목 분류 기준이며 15시 30분 이후 공시는 다음 거래일부터 반영' },
     ] },
     { id: 'model', l: '모델', d: '학습 방식과 예측 대상', g: [
       { t: '학습 방식', items: [R('set', 'algo', 'ridge', '선형 회귀(Ridge)'), R('set', 'algo', 'lightgbm', '트리 기반(LightGBM)')],
@@ -305,12 +310,12 @@
     return `<button class="chip ${i.live ? '' : 'x'}" data-act="x" data-v="${i.id}" aria-pressed="${on}">${i.l}${i.acct ? '<i>계좌</i>' : ''}</button>${num}`;
   }
   const groupCard = (g, s, basic) => {
-    const items = basic ? g.items.filter(i => i.b) : g.items;
+    const items = (basic ? g.items.filter(i => i.b) : g.items).filter(i => !i.need || HAS(i.need));
     return items.length || (g.extra && !basic) ? `<div class="card grp ${g.wide && !basic ? 'wide' : ''}"><h3>${g.t}</h3><div class="chips">${items.map(i => itemChip(i, s)).join('')}</div>${g.extra && !basic ? g.extra(s) : ''}${g.n ? `<p class="muted">${g.n}</p>` : ''}</div>` : '';
   };
   const belCard = (s, detail) => {
     const M = LM(), fs = M && detail ? featsOf(s) : [];
-    return `<div class="card grp wide"><h3>나의 판단 반영</h3><div class="chips">${BEL.map((b, i) => `<button class="chip" data-act="belp" data-v="${i}" aria-pressed="${belOn(s, b[1])}">${b[0]}</button>`).join('')}</div>
+    return `<div class="card grp wide"><h3>나의 판단 반영</h3><div class="chips">${BEL.map((b, i) => !belOk(b) ? '' : `<button class="chip" data-act="belp" data-v="${i}" aria-pressed="${belOn(s, b[1])}">${b[0]}</button>`).join('')}</div>
       ${fs.length ? `<details class="sub2" ${belCount(s) ? 'open' : ''}><summary>변수별 방향 지정(${belCount(s)}개 지정)</summary><div class="bel">${fs.map(f => { const v = (s.belief || {})[f] || 0; return `<div><span>${esc(M.feature_labels[f])}</span><span class="seg3">${[[-1, '낮을수록 유리'], [0, '미지정'], [1, '높을수록 유리']].map(([x, l]) => `<button data-act="bel" data-k="${f}" data-v="${x}" aria-pressed="${v === x}">${l}</button>`).join('')}</span></div>`; }).join('')}</div></details>` : ''}
       <p class="muted">본인이 지정한 방향과 반대로 학습된 변수는 학습에서 제외. 선형 회귀 적용 항목</p></div>`;
   };
@@ -371,7 +376,7 @@
       <div class="kv"><span>수수료</span><span>매수·매도 0.015%</span></div>
       <div class="kv"><span>거래세</span><span>매도 0.20%</span></div>
       <div class="kv"><span>슬리피지</span><span>편도 0.10%</span></div>
-      <div class="kv"><span>배당</span><span>미반영(자료 미확보)</span></div>
+      <div class="kv"><span>배당</span><span>수익률 계산 미반영(배당수익률은 학습 변수로 제공)</span></div>
       <div class="kv"><span>호가·체결량</span><span>미반영(일봉 자료)</span></div>` : ''}</div>`;
     return `<div class="card"><h3>연구 계획</h3>
       <div class="plan">국내주식 거래대금 상위 300종목 대상, <b>${s.groups.map(g => GL()[g]).join('·')}</b> 정보 기반 <b>${s.h}거래일 후 수익률</b> 예측 모델 학습.
@@ -672,12 +677,14 @@
       { change: '하락장 한정 코스피200 선물 헤지 50%', kind: 'strategy', dv: 1, patch: { x: { p_futd: 50 } } }, { change: '코스피200 풋옵션 매수', kind: 'strategy', dv: 1, patch: { x: { p_put: 100 } } }],
     less_trading: [{ change: '예측·보유 기간 60거래일', kind: 'model', patch: { model_spec: { horizon_days: 60 } } }],
     more_data: [{ change: '투자자별 수급 변수 추가', kind: 'model', patch: { model_spec: { add_groups: ['flow'] } } }, { change: '업종·테마 변수 추가', kind: 'model', patch: { model_spec: { add_groups: ['sector'] } } },
-      { change: '전체 변수 반영', kind: 'model', patch: { model_spec: { add_groups: ['volume', 'risk', 'size', 'trend', 'pattern', 'beta', 'age', 'flow', 'sector', 'disc'] } } }],
+      { change: '실적·재무 변수 추가', kind: 'model', need: 'fund', patch: { model_spec: { add_groups: ['fund'] } } }, { change: '배당 변수 추가', kind: 'model', need: 'div', patch: { model_spec: { add_groups: ['div'] } } },
+      { change: '애널리스트 보고서 변수 추가', kind: 'model', need: 'analyst', patch: { model_spec: { add_groups: ['analyst'] } } }, { change: '주요 공시 유형 변수 추가', kind: 'model', need: 'event', patch: { model_spec: { add_groups: ['event'] } } },
+      { change: '전체 변수 반영', kind: 'model', all: 1, patch: { model_spec: { add_groups: ['volume', 'risk', 'size', 'trend', 'pattern', 'beta', 'age', 'flow', 'sector', 'disc'] } } }],
   };
   async function runOpt(req) {
     const imp = CAT.improvements[req], baseS = S.cur.s;
     const out = await withBusy(`${imp.label} 후보 실험 중`, async log => {
-      const noDv = xon(baseS, 'exp1'), cands = [...imp.candidates, ...(EXTRA[req] || []).filter(c => !(c.dv && noDv))];
+      const noDv = xon(baseS, 'exp1'), cands = [...imp.candidates, ...(EXTRA[req] || []).filter(c => !(c.dv && noDv) && (!c.need || HAS(c.need))).map(c => c.all ? { ...c, patch: { model_spec: { add_groups: Object.keys(LM().groups).filter(g => g !== 'price') } } } : c)];
       log(`[연구 계획] 후보 ${cands.length}건 비교`);
       const rows = [{ tag: (S.versions.find(v => v.run.run_id === S.cur.run_id) || { name: 'V' + S.versions.length }).name, kind: 'base', change: '기존', run: S.cur, retrained: false }];
       let n = 0;
@@ -746,6 +753,10 @@
     if (/업종|섹터|테마/.test(t) && /강세|주도|오르는|좋은|선호/.test(t)) bel(7);
     if (/수급/.test(t)) { add('flow'); notes.push('투자자별 수급 정보 추가'); }
     if (/공시/.test(t)) { add('disc'); notes.push('공시 정보 추가'); }
+    const opt = (re, g, msg, bi) => { if (!re.test(t)) return; if (!HAS(g)) { no.push(SHORT[g] + ' 자료 미수집'); return; } if (bi != null) bel(bi); else { add(g); notes.push(msg); } };
+    opt(/목표가|목표 ?주가/, 'analyst', '', 8); if (!/목표가|목표 ?주가/.test(t)) opt(/애널|리포트|보고서/, 'analyst', '애널리스트 보고서 정보 추가');
+    opt(/저평가|PER|PBR|싼 ?종목|가치주/i, 'fund', '', 9); opt(/매출.*(성장|증가)|성장주/, 'fund', '', 10); if (!/저평가|PER|PBR|싼 ?종목|가치주|매출.*(성장|증가)|성장주/i.test(t)) opt(/실적|재무|이익/, 'fund', '실적·재무 정보 추가');
+    opt(/배당/, 'div', '', 11); opt(/자사주|자기주식/, 'event', '', 12); opt(/유상증자|증자|전환사채|CB/, 'event', '', 13);
     if (/시장경보|투자주의|투자경고|관리종목/.test(t)) lx('noalert');
     if (/나스닥|미국 ?(증시|시장|장)/.test(t) && /하락|빠지|떨어|급락/.test(t)) lx('nas', num(/(\d+(?:\.\d+)?) ?%/));
     else if (/나스닥/.test(t)) lx('p_nas', num(/나스닥[^0-9]{0,10}(\d+) ?%/));
@@ -756,7 +767,7 @@
     if (/금 ?(투자|현물|선물|비중)|골드/.test(t)) lx('p_gold', num(/(?:금|골드)[^0-9]{0,10}(\d+) ?%/));
     if (/국고채|국채|채권/.test(t)) lx(/3년|단기/.test(t) ? 'p_bond' : 'p_bond10', num(/(?:국고채|국채|채권)[^0-9]{0,10}(\d+) ?%/));
     if (/업종.*(분산|쏠림|편중)|한 업종/.test(t)) lx('scap', num(/(\d+) ?%/));
-    if (/실적|재무|PER|PBR|배당|애널|리포트|목표가|뉴스|기사|공매도/i.test(t)) no.push('실적·배당·보고서·뉴스·공매도 자료 미연결');
+    if (/뉴스|기사|공매도/.test(t)) no.push('과거 뉴스·공매도 자료 미연결');
     if (/추천|뭐 ?사|사야|사도|살까|팔까|팔아|매수해|매도해|오를|될까/.test(t)) no.push('종목 추천·매수 권유 미제공(과거 데이터 연구로 한정)');
     if (!s.rules.includes(t.trim())) s.rules = [...s.rules, t.trim()].slice(-20);
     return (notes.length ? '<b>계산 반영:</b> ' + [...new Set(notes)].map(esc).join(', ') : '계산 반영 조건 없음') + '<br><b>규칙 기록:</b> 1건' + (no.length ? '<br><b>미지원:</b> ' + no.join(' / ') : '') + '<br><span class="muted">규칙 기반 해석. 재학습 시 결과 반영</span>';
