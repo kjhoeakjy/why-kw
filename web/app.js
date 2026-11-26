@@ -156,13 +156,13 @@
   function landing() {
     const f = S.forked;
     return `${header()}<div class="land">
-      <div class="intro"><h2>투자 기준 학습·검증 AI</h2>
-        <p class="sub">주문 전 실제 데이터 검증, 계좌 개설 전 체험 가능</p>
+      <div class="intro"><h2>직접 학습시키는 나의 투자 AI</h2>
+        <p class="sub">투자 성향, 상품 유형, 자산 현황, 본인 판단 반영 맞춤형 전략</p>
         <p class="muted">신입사원 과제 시연용 화면이며 키움증권의 실제 서비스가 아님</p></div>
       ${f ? recipeCard(f.spec, '<button class="btn small" data-act="fork">설정 복제 후 수정</button>', '공유받은 설정') : ''}
       <div class="card steps"><h3>이용 순서</h3>
-        <div class="kv"><span>01 투자 기준 선택</span><span>중시 정보, 보유 기간, 운용 방식</span></div>
-        <div class="kv"><span>02 AI 학습·검증</span><span>거래 비용 반영, 지수 대비 판정</span></div>
+        <div class="kv"><span>01 나의 기준 입력</span><span>성향, 상품, 자산, 판단</span></div>
+        <div class="kv"><span>02 AI 학습·전략 제시</span><span>실제 과거 데이터 검증, 적합 판정</span></div>
         <div class="kv"><span>03 AI 개선</span><span>후보 비교, 채택 판정</span></div>
         </div>
       <div class="card start"><button class="btn" data-act="acct">키움증권 계좌로 시작</button>
@@ -175,6 +175,7 @@
         <div class="kv"><span>검증 방식</span><span>실제 과거 시세, 거래 비용 반영</span></div>
         <div class="kv"><span>사용 데이터</span><span>국내주식 일봉 ${CAT.data.start.slice(0, 4)}~${CAT.data.end.slice(0, 7)}</span></div>
         <div class="kv"><span>이용 조건</span><span>계좌 개설 불필요, 주문 미연결</span></div>
+        <div class="kv"><span>상품 범위</span><span>국내주식 계산 반영, 그 외 상품·파생상품 설계안</span></div>
         <div class="kv"><span>시연 범위</span><span>${LIVE ? '요청 시 서버 학습' : `사전 학습·검증 결과 ${CAT.index.runs.toLocaleString()}건 조회`}</span></div></details></div>
       ${disclosures()}`;
   }
@@ -185,6 +186,19 @@
   const X = (id, l, o = {}) => ({ id, l, ...o });
   const L = (rg, l) => ({ real: 1, act: 'lock', rg, l });
   const SEC = [
+    { id: 'me', l: '성향·자산', d: '투자 성향과 자산 현황', g: [
+      { t: '투자 성향', items: Object.keys(PRESET).map(k => R('set', 'preset', k, PRESET[k])), n: '전략 후보 비교 시 우선순위 기준' },
+      { t: '투자 경험', items: [X('exp1', '1년 미만', { rg: 'exp' }), X('exp2', '1~5년', { rg: 'exp' }), X('exp3', '5년 이상', { rg: 'exp' })] },
+      { t: '투자 목적', items: [X('goal1', '목돈 마련', { b: 1 }), X('goal2', '노후 대비', { b: 1 }), X('goal3', '단기 수익', { b: 1 }), X('goal4', '정기 현금 수입', { b: 1 })] },
+      { t: '자산 현황', items: [X('hold', '보유 종목·현금', { acct: 1 }), X('asset2', '타 금융자산 직접 입력'), X('monthly', '월 적립 금액', { num: { def: 50, unit: '만 원', min: 1, max: 10000 } }), X('loan', '대출·신용 사용 여부')] },
+      { t: '손실 감내 수준', items: [X('tol', '연간 손실 허용 한도', { num: { def: 10, unit: '%', min: 1, max: 100 } })] },
+    ] },
+    { id: 'prod', l: '투자 상품', d: '전략에 포함할 상품 유형', g: [
+      { t: '주식', items: [L('prodbase', '국내주식'), X('p_us', '해외주식', { b: 1 }), X('p_etf', '상장지수펀드(ETF)', { b: 1 }), X('p_reit', '리츠')] },
+      { t: '채권·현금성', items: [X('p_bond', '채권', { b: 1 }), X('p_rp', '환매조건부채권(RP)·발행어음'), X('p_fund', '펀드')] },
+      { t: '파생상품', items: [X('p_fut', '선물', { b: 1 }), X('p_opt', '옵션', { b: 1 }), X('p_elw', '주식워런트증권(ELW)'), X('p_els', '주가연계증권(ELS)·파생결합증권(DLS)'), X('p_lev', '레버리지·인버스 상품')], n: '파생상품은 투자자 적합성 확인과 사전 교육 이수 고객 대상(설계안)' },
+      { t: '활용 목적', items: [X('u_hedge', '보유 자산 위험 회피'), X('u_income', '추가 수익'), X('u_alloc', '자산 배분')] },
+    ] },
     { id: 'data', l: '데이터', d: 'AI가 학습할 자료', g: [
       { t: '시세·거래', items: [R('grp', '', 'price', '가격 흐름(필수)'), R('grp', '', 'volume', '거래량'), R('grp', '', 'risk', '하락 위험'), R('grp', '', 'size', '기업 규모'), X('limit', '상·하한가 이력'), X('minute', '1분 단위 시세'), X('pre', '장 시작 전 예상 체결'), X('nxt', '대체거래소·시간외 시세')] },
       { t: '수급', items: [X('frg', '외국인 순매수', { b: 1 }), X('inst', '기관 순매수', { b: 1 }), X('indiv', '개인 순매수'), X('prog', '프로그램 매매'), X('short', '공매도·대차 잔고')] },
@@ -193,7 +207,7 @@
       { t: '업종·테마', items: [X('sector', '업종 동향', { b: 1 }), X('theme', '테마 동향'), X('rank', '거래 상위 종목 출현 횟수')] },
       { t: '시장·해외', items: [X('kidx', '코스피·코스닥 지수'), X('us', '미국 지수(전일 밤)', { b: 1 }), X('fx', '환율'), X('breadth', '상승·하락 종목 비율'), X('rate', '금리·원자재')] },
       { t: '제도·일정', items: [X('alert', '시장경보·거래정지·관리종목'), X('ipo', '신규 상장 경과일'), X('cal', '옵션 만기일·요일')] },
-      { t: '나의 자료', items: [X('hold', '보유 종목·현금', { acct: 1 }), X('trades', '나의 거래 내역', { acct: 1 }), X('watch', '관심 종목'), X('file', '직접 등록 자료(파일)')] },
+      { t: '나의 자료', items: [X('trades', '나의 거래 내역', { acct: 1 }), X('watch', '관심 종목'), X('file', '직접 등록 자료(파일)')] },
     ] },
     { id: 'model', l: '모델', d: '학습 방식과 예측 대상', g: [
       { t: '학습 방식', items: [R('set', 'algo', 'ridge', '선형 회귀(Ridge)'), R('set', 'algo', 'lightgbm', '트리 기반(LightGBM)'), X('gru', '순환 신경망(GRU)'), X('tabpfn', '사전 학습 표 모형(TabPFN)'), X('mlp', '다층 신경망(MLP)'), X('ens', '복수 모형 결합')] },
@@ -201,7 +215,6 @@
       { t: '보조 모형', items: [X('calib', '예측 확률 보정'), X('meta', '매수 여부 재판정(메타 라벨링)'), X('rerank', '상위 후보 재순위'), X('llmread', '뉴스·공시 판독(언어 모형)')] },
       { t: '학습 구간', items: [L('win', '직전 4년'), X('w2', '직전 2년', { rg: 'win' }), X('wall', '전체 기간', { rg: 'win' })] },
       { t: '재학습 주기', items: [L('freq', '연 1회'), X('fm', '월 1회', { rg: 'freq' }), X('fw', '주 1회', { rg: 'freq' })] },
-      { t: '우선 목표', items: Object.keys(PRESET).map(k => R('set', 'preset', k, PRESET[k])), n: '개선 후보 비교 시 우선순위 기준' },
     ] },
     { id: 'op', l: '운용', d: '종목 선정과 매매 방식', g: [
       { t: '보유 기간', basic: 1, items: [R('set', 'h', 5, '단기(약 1주)'), R('set', 'h', 20, '중기(약 1개월)')], hideAdv: 1 },
@@ -218,7 +231,7 @@
       { t: '편중 제한', items: [X('wcap', '종목당 비중 상한', { num: { def: 20, unit: '%', min: 1, max: 100 } }), X('scap', '업종당 비중 상한', { num: { def: 40, unit: '%', min: 1, max: 100 } })] },
       { t: '주문 통제', items: [X('approve', '주문 전 본인 승인', { acct: 1 }), X('olimit', '일일 주문 한도', { acct: 1 }), X('pause', '손실 한도 도달 시 운용 중단', { acct: 1 })] },
     ] },
-    { id: 'mine', l: '나의 전략', d: '직접 입력하는 규칙', g: [] },
+    { id: 'mine', l: '나의 판단', d: '직접 입력하는 판단과 규칙', g: [] },
   ];
   const XI = {};
   SEC.forEach(sc => sc.g.forEach(g => g.items.forEach(i => { if (!i.real) XI[i.id] = { ...i, sec: sc.id, t: g.t }; })));
@@ -241,21 +254,22 @@
     const items = basic ? g.items.filter(i => i.b) : g.items;
     return items.length ? `<div class="card grp"><h3>${g.t}</h3><div class="chips">${items.map(i => itemChip(i, s)).join('')}</div>${g.n ? `<p class="muted">${g.n}</p>` : ''}</div>` : '';
   };
-  const ruleCard = s => `<div class="card grp wide"><h3>나의 규칙 입력</h3>
-      <textarea id="nl" placeholder="예: 외국인 5일 연속 순매수 종목 우선, 실적 발표 전날 신규 매수 중단, 손절 7%"></textarea>
+  const ruleCard = s => `<div class="card grp wide"><h3>나의 판단·규칙 입력</h3>
+      <textarea id="nl" placeholder="예: 반도체 업종 비중 확대, 외국인 5일 연속 순매수 종목 우선, 보유 주식 하락 대비 옵션 활용, 손절 7%"></textarea>
       <button class="btn ghost small" data-act="nl">규칙 추가</button>
       ${S.planNote ? `<div class="note">${S.planNote}</div>` : ''}
       ${(s.rules || []).length ? `<div class="rules">${s.rules.map((r, i) => `<div class="kv"><span>${esc(r)}</span><button class="del" data-act="rdel" data-v="${i}" aria-label="규칙 삭제">삭제</button></div>`).join('')}</div>` : ''}
       <p class="muted">문장 입력 가능. 시연 화면은 일부 조건 자동 반영, 그 외 문장은 기록 처리</p></div>`;
 
   function createMy() {
-    const s = S.spec, adv = !!S.adv, sec = SEC.find(x => x.id === (S.sec || 'data')) || SEC[0];
+    const s = S.spec, adv = !!S.adv, sec = SEC.find(x => x.id === (S.sec || 'me')) || SEC[0];
     const legend = `<p class="lg"><span><b class="dot on"></b>시연 계산 반영</span><span><b class="dot"></b>설계안(선택 내용 기록, 시연 계산 미반영)</span></p>`;
     let main;
     if (!adv) {
-      const info = SEC[0].g.flatMap(g => g.items.filter(i => i.b));
-      main = `<div class="gg"><div class="card grp wide"><h3>중시하는 정보</h3><div class="chips">${info.map(i => itemChip(i, s)).join('')}</div></div>
-        ${groupCard(SEC[2].g[0], s)}${groupCard(SEC[2].g[6], s, true)}${ruleCard(s)}</div>`;
+      const G = id => SEC.find(x => x.id === id).g, bas = id => G(id).flatMap(g => g.items.filter(i => i.b || i.act === 'lock'));
+      const wide = (h, items) => `<div class="card grp wide"><h3>${h}</h3><div class="chips">${items.map(i => itemChip(i, s)).join('')}</div></div>`;
+      main = `<div class="gg">${groupCard(G('me')[0], s)}${groupCard(G('me')[2], s)}${wide('투자 상품', bas('prod'))}${wide('중시하는 정보', bas('data'))}
+        ${groupCard(G('op')[0], s)}${groupCard(G('op')[6], s, true)}${ruleCard(s)}</div>`;
     } else if (sec.id === 'mine') {
       main = `<div class="gg">${ruleCard(s)}
         <div class="card grp wide"><h3>키움증권 계좌 연계 항목 <span class="badge">설계안</span></h3>
@@ -267,7 +281,7 @@
     } else main = `<div class="gg">${sec.g.filter(g => !g.hideAdv).map(g => groupCard(g, s)).join('')}</div>`;
     const cnt = id => (s.x || []).filter(x => XI[x] && XI[x].sec === id).length + (id === 'mine' ? (s.rules || []).length : 0);
     const nav = adv ? `<div class="secnav">${SEC.map(x => `<button data-act="sec" data-v="${x.id}" aria-current="${x.id === sec.id}"><b>${x.l}</b><span>${x.d}</span>${cnt(x.id) ? `<em>${cnt(x.id)}</em>` : ''}</button>`).join('')}</div>` : '';
-    return `<div class="sethead"><div><h2>투자 기준 설정</h2><p class="sub">${adv ? '데이터, 모델, 운용, 위험 관리, 나의 전략 직접 구성' : '핵심 항목 선택'}</p></div>
+    return `<div class="sethead"><div><h2>나의 투자 AI 학습 설정</h2><p class="sub">${adv ? '성향·자산, 투자 상품, 데이터, 모델, 운용, 위험 관리, 나의 판단 직접 구성' : '투자 성향, 투자 상품, 중시하는 정보, 나의 판단 입력'}</p></div>
       <div class="seg"><button data-act="lvl" data-v="0" aria-pressed="${!adv}">일반</button><button data-act="lvl" data-v="1" aria-pressed="${adv}">고급</button></div></div>
       <div class="setwrap ${adv ? 'adv' : 'basic'}">${nav}<div class="setmain">${legend}${main}</div>
       <div class="side">${planCard()}<div class="cta"><button class="btn" data-act="run">${S.cur ? '변경 기준 재학습' : 'AI 학습 시작'}</button></div></div></div>`;
@@ -279,7 +293,7 @@
       <div class="kv"><span>반영 정보</span><span>${s.groups.map(g => SHORT[g]).join('·')}</span></div>
       <div class="kv"><span>운용</span><span>점수 상위 ${s.k}종목, ${s.h === 5 ? '약 1주' : '약 1개월'} 주기 교체</span></div>
       ${[s.buf > 1 ? '보유 종목 교체 축소' : null, s.vf > 0 ? '변동성 큰 종목 제외' : null, s.mf ? '하락장 신규 매수 중단' : null].filter(Boolean).map(t => `<div class="kv"><span>추가 조건</span><span>${t}</span></div>`).join('')}
-      <div class="kv"><span>우선 목표</span><span>${PRESET[s.preset || 'balanced']}</span></div>
+      <div class="kv"><span>투자 성향</span><span>${PRESET[s.preset || 'balanced']}</span></div>
       <div class="kv"><span>검증 기간</span><span>${CAT.periods.development[0].slice(0, 4)}~${CAT.periods.development[1].slice(0, 4)}년</span></div>
       <div class="kv"><span>거래 비용</span><span>수수료·세금·슬리피지 반영</span></div>
       ${xNames(s).length || (s.rules || []).length ? `<h3 style="margin-top:18px">설계안 선택 항목 <span class="badge">${xNames(s).length + (s.rules || []).length}개</span></h3>
@@ -384,7 +398,15 @@
         <p class="muted">기본 가정: 수수료 0.015%, 매도 시 거래세 0.20%, 슬리피지 편도 0.10%. 슬리피지 3배: 편도 0.30%</p></div>` : '';
     const led = qs ? r.ledger_tail : r.ledger_tail.filter(l => l.side !== '매수불가');
     const askCard = `<div class="card" data-keep="1"><h3>AI 개선</h3>${['reduce_loss', 'less_trading', 'more_data'].map(k => `<button class="rowbtn" data-act="opt" data-v="${k}"><span>${CAT.improvements[k].label}</span><i>›</i></button>`).join('')}</div>`;
-    return `${head}<div class="cols">
+    const xs = xNames(r.s), stratCard = `<div class="card span strat" data-keep="1"><h3>나의 AI 제시 전략</h3><div class="sg">
+        <div class="kv"><span>투자 성향</span><span>${PRESET[r.s.preset || 'balanced']}</span></div>
+        <div class="kv"><span>투자 상품</span><span>국내주식${xs.filter((_, i) => XI[(r.s.x || []).filter(id => XI[id])[i]].sec === 'prod').length ? ' 외 설계안 ' + (r.s.x || []).filter(id => XI[id] && XI[id].sec === 'prod').length + '종' : ''}</span></div>
+        <div class="kv"><span>종목 선정</span><span>학습 점수 상위 ${r.s.k}종목, 동일 비중</span></div>
+        <div class="kv"><span>보유·교체</span><span>${r.s.h === 5 ? '약 1주' : '약 1개월'} 주기, ${r.s.buf > 1 ? '보유 유지 우선' : '정기 교체'}</span></div>
+        <div class="kv"><span>위험 조건</span><span>${[r.s.vf > 0 ? '변동성 큰 종목 제외' : null, r.s.mf ? '하락장 신규 매수 중단' : null].filter(Boolean).join(', ') || '미설정'}</span></div>
+        <div class="kv"><span>나의 판단</span><span>${(r.s.rules || []).length ? (r.s.rules || []).length + '건 입력' : '미입력'}</span></div></div>
+        <p class="muted">과거 데이터 기준 전략이며 현재 시점의 종목 추천 미제공</p></div>`;
+    return `${head}<div class="cols">${stratCard}
       <div class="card span herocard" data-keep="1"><div class="ha">${perSel}<p class="sub">${d.from.slice(0, 4)}${d.from.slice(0, 4) === d.to.slice(0, 4) ? '' : '~' + d.to.slice(0, 4)}년 과거 검증 · ${man(d.start_value)} 투자 가정</p>
         <div class="hero ${cls(d.total_return)}">${won(d.end_value)} <small>${pct(d.total_return)} · 연 ${pct(d.cagr)}</small></div>${verdictNote}${idxNote}</div>
         <div class="hc">${chart}</div>

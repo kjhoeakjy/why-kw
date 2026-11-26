@@ -263,3 +263,4 @@ header.top h1{cursor:pointer}
 .home header.top h1{padding-left:10px;border-left:1px solid var(--axis)}
 .home header.top h1::after{content:none}
 @media (min-width:1000px){.logo{display:block;height:20px}header.top h1{padding-left:12px;border-left:1px solid var(--axis)}header.top h1::after{content:none}}
+@media (min-width:1000px){.strat .sg{display:grid;grid-template-columns:repeat(3,1fr);gap:0 28px}.strat .sg .kv{border-bottom:1px solid var(--grid)}}
