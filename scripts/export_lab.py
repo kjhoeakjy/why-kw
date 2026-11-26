@@ -1,8 +1,11 @@
 """브라우저 내 학습·검증용 자료 내보내기. 결과: web/data/lab/
+- 외부 실제 자료(scripts/fetch_real_data.sh): 투자자별 순매수, 외국인 보유율, 업종·테마 구성, 공시 제목, 코스피 지수, 해외 지수·환율,
+  ETF·선물·옵션·미국 주식 일별 시세. 가정값이나 이론가를 쓰지 않는다.
 - 선형 모델은 연도별 충분통계량(X'X, X'y)으로 내보내 브라우저에서 임의의 변수 조합으로 학습한다(전체 표본 학습과 동일한 해).
 - 가상 운용은 일별 수정주가 수익률(로그, 1e-4 단위 정수)로 브라우저에서 재계산한다."""
 import gzip
 import json
+import os
 import pathlib
 import sys
 
@@ -25,7 +28,184 @@ NEW_GROUPS = {
 NEW_LABELS = {"mom_250": "최근 250일 수익률(직전 20일 제외)", "low252_ratio": "52주 최저가 대비 위치", "up_limit_20": "최근 20일 상한가 횟수",
               "streak_up": "연속 상승 일수", "gap_20": "20일 평균 시가 갭", "intra_20": "20일 평균 장중 수익률", "rev_1": "전일 수익률",
               "beta_60": "60일 시장 민감도(베타)", "skew_60": "60일 수익률 왜도", "listed_days": "상장 경과 일수"}
-GROUP_LABELS = {**data.GROUP_LABELS, "trend": "장기 추세", "pattern": "급등·갭 이력", "beta": "시장 민감도", "age": "상장 경과"}
+NEW_GROUPS.update({
+    "flow": ["frgn_5", "frgn_20", "inst_5", "inst_20", "indiv_20", "frate", "frate_chg_20"],
+    "sector": ["ind_ret_5", "ind_ret_20", "rel_ind_20", "theme_ret_20"],
+    "disc": ["disc_cnt_20", "alert_20"],
+})
+NEW_LABELS.update({"frgn_5": "외국인 5일 순매수 강도", "frgn_20": "외국인 20일 순매수 강도", "inst_5": "기관 5일 순매수 강도", "inst_20": "기관 20일 순매수 강도",
+                   "indiv_20": "개인 20일 순매수 강도", "frate": "외국인 보유율", "frate_chg_20": "외국인 보유율 20일 변화",
+                   "ind_ret_5": "소속 업종 5일 수익률", "ind_ret_20": "소속 업종 20일 수익률", "rel_ind_20": "업종 대비 20일 초과 수익률", "theme_ret_20": "소속 테마 20일 수익률(최고)",
+                   "disc_cnt_20": "최근 20일 공시 건수", "alert_20": "최근 20일 시장경보 지정"})
+GROUP_LABELS = {**data.GROUP_LABELS, "trend": "장기 추세", "pattern": "급등·갭 이력", "beta": "시장 민감도", "age": "상장 경과",
+                "flow": "투자자별 수급", "sector": "업종·테마 동향", "disc": "공시·시장경보"}
+EXT = pathlib.Path(os.environ.get("REAL_DATA", "/home/claude/shl"))
+ETFS = [("069500", "KODEX 200", "국내 지수"), ("229200", "KODEX 코스닥150", "국내 지수"), ("122630", "KODEX 레버리지", "레버리지"), ("233740", "KODEX 코스닥150레버리지", "레버리지"),
+        ("114800", "KODEX 인버스", "인버스"), ("252670", "KODEX 200선물인버스2X", "인버스"), ("251340", "KODEX 코스닥150선물인버스", "인버스"),
+        ("153130", "KODEX 단기채권", "현금성"), ("157450", "TIGER 단기통안채", "현금성"), ("114260", "KODEX 국고채3년", "채권"), ("148070", "KIWOOM 국고채10년", "채권"),
+        ("305080", "TIGER 미국채10년선물", "채권"), ("304660", "KODEX 미국30년국채울트라선물(H)", "채권"),
+        ("143850", "TIGER 미국S&P500선물(H)", "해외 지수"), ("133690", "TIGER 미국나스닥100", "해외 지수"), ("132030", "KODEX 골드선물(H)", "원자재·통화"), ("261240", "KODEX 미국달러선물", "원자재·통화"),
+        ("289480", "TIGER 200커버드콜", "커버드콜")]
+US_NAMES = {"AAPL": "애플", "MSFT": "마이크로소프트", "NVDA": "엔비디아", "AMZN": "아마존", "GOOGL": "알파벳", "META": "메타", "TSLA": "테슬라", "AVGO": "브로드컴", "BRK-B": "버크셔해서웨이",
+            "LLY": "일라이릴리", "JPM": "JP모건", "V": "비자", "UNH": "유나이티드헬스", "XOM": "엑슨모빌", "MA": "마스터카드", "COST": "코스트코", "HD": "홈디포", "PG": "P&G", "JNJ": "존슨앤드존슨", "NFLX": "넷플릭스"}
+
+
+def ymd(s):
+    return pd.to_datetime(s.astype(str).str[:8], format="%Y%m%d")
+
+
+def real_market():
+    m = pd.read_parquet(EXT / "market.parquet")
+    m["Date"] = ymd(m.date)
+    return m.pivot_table(index="Date", columns="symbol", values="close", aggfunc="last").sort_index()
+
+
+def add_real_features(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+    """수급(2022~), 외국인 보유율(2019~), 업종·테마(현재 구성 기준), 공시 제목 기반 변수. 자료가 없는 기간·종목은 결측(중립값 처리)."""
+    key = ["Code", "Date"]
+    fl = pd.read_parquet(EXT / "flows.parquet").rename(columns={"code": "Code"})
+    fl["Date"] = ymd(fl.date)
+    px = pd.read_parquet(EXT / "prices.parquet", columns=["code", "date", "frate"]).rename(columns={"code": "Code"})
+    px["Date"] = ymd(px.date)
+    df = df.merge(fl[key + ["frgn", "inst", "indiv"]], on=key, how="left").merge(px[key + ["frate"]], on=key, how="left")
+    df = df.sort_values(key).reset_index(drop=True)
+    g = lambda s: s.groupby(df.Code, sort=False)
+    vol = df.Volume.astype(float)
+    for col, n, name in (("frgn", 5, "frgn_5"), ("frgn", 20, "frgn_20"), ("inst", 5, "inst_5"), ("inst", 20, "inst_20"), ("indiv", 20, "indiv_20")):
+        num = g(df[col]).rolling(n, min_periods=n).sum().reset_index(level=0, drop=True)
+        den = g(vol).rolling(n, min_periods=n).sum().reset_index(level=0, drop=True)
+        df[name] = num / den.where(den > 0)
+    df.loc[df.frate.isna() | (df.Date < "2019-01-02"), "frate"] = np.nan
+    df["frate_chg_20"] = df.frate - g(df.frate).shift(20)
+    # 업종·테마
+    grp = json.loads((EXT / "groups.json").read_text())
+    ind_names = [x["name"] for x in grp["industry"]]
+    ind_of = {}
+    for i, x in enumerate(grp["industry"]):
+        for c in x["codes"]:
+            ind_of.setdefault(c, i)
+    df["ind"] = df.Code.map(ind_of)
+    for n in (5, 20):
+        m = df.groupby(["Date", "ind"])[f"mom_{n}"].transform("mean")
+        df[f"ind_ret_{n}"] = m.where(df.ind.notna())
+    df["rel_ind_20"] = df.mom_20 - df.ind_ret_20
+    wide = df.pivot(index="Date", columns="Code", values="mom_20")
+    best = pd.DataFrame(-np.inf, index=wide.index, columns=wide.columns)
+    for x in grp["theme"]:
+        cs = [c for c in x["codes"] if c in wide.columns]
+        if len(cs) < 3:
+            continue
+        tm = wide[cs].mean(axis=1).values[:, None]
+        best[cs] = np.fmax(best[cs].values, np.where(np.isnan(tm), -np.inf, tm))
+    th = best.replace(-np.inf, np.nan).stack().rename("theme_ret_20").reset_index()
+    df = df.merge(th, on=["Date", "Code"], how="left")
+    # 공시
+    ds = pd.read_parquet(EXT / "disclosures.parquet").rename(columns={"code": "Code"})
+    ds["Date"] = ymd(ds.dt)
+    ds = ds[ds.Date >= "2014-06-01"]
+    ds["al"] = ds.title.str.contains("투자주의|투자경고|투자위험|단기과열|관리종목|불성실공시", regex=True).astype(float)
+    dd = ds.groupby(key).agg(dn=("title", "size"), al=("al", "max")).reset_index()
+    df = df.merge(dd, on=key, how="left").sort_values(key).reset_index(drop=True)
+    has = df.Code.isin(set(ds.Code.unique()))
+    df["dn"], df["al"] = df.dn.fillna(0.0), df.al.fillna(0.0)
+    df["disc_cnt_20"] = df.dn.groupby(df.Code, sort=False).rolling(20, min_periods=1).sum().reset_index(level=0, drop=True).where(has)
+    df["alert_20"] = df.al.groupby(df.Code, sort=False).rolling(20, min_periods=1).max().reset_index(level=0, drop=True).where(has)
+    return df.drop(columns=["frgn", "inst", "indiv", "dn", "al"]), {"ind_names": ind_names, "ind_of": ind_of}
+
+
+def real_products(days: pd.DatetimeIndex, mk: pd.DataFrame) -> tuple[np.ndarray, list]:
+    """실제 ETF·미국 주식 일별 수익률(원화). 미국 주식은 직전 미국 장 종가에 당일 원/달러 환율 적용."""
+    e = pd.read_csv(EXT / "study_etf_daily.csv.gz", dtype={"code": str, "date": str})
+    e["Date"] = ymd(e.date)
+    ep = e.pivot_table(index="Date", columns="code", values="close", aggfunc="last")
+    cols, meta = [], []
+    for code, name, cat in ETFS:
+        s = ep[code].reindex(days).ffill()
+        assert s.notna().all(), code
+        cols.append(s)
+        meta.append({"id": "E" + code, "code": code, "name": name, "cat": cat})
+    u = pd.read_csv(EXT / "study_us_daily.csv.gz", dtype={"date": str})
+    u["Date"] = ymd(u.date)
+    up = u.pivot_table(index="Date", columns="symbol", values="close", aggfunc="last").sort_index()
+    fx = mk["USDKRW"].reindex(days.union(mk.index)).ffill().reindex(days)
+    for sym, name in US_NAMES.items():
+        s = up[sym].dropna()
+        pos = np.searchsorted(s.index.values, days.values, "left") - 1          # 해당 한국 거래일 이전 마지막 미국 장
+        v = pd.Series(np.where(pos >= 0, s.values[np.clip(pos, 0, None)], np.nan), index=days) * fx
+        assert v.notna().all(), sym
+        cols.append(v)
+        meta.append({"id": "U" + sym, "code": sym, "name": name, "cat": "해외주식"})
+    px = pd.concat(cols, axis=1).values
+    lr = np.zeros_like(px)
+    lr[1:] = np.log(px[1:] / px[:-1])
+    return np.clip(np.round(lr * 1e4), -32767, 32767).astype(np.int16), meta
+
+
+def real_derivs(days: pd.DatetimeIndex) -> dict:
+    """코스피200 선물 근월물 일별 수익률과 월물 옵션(풋 95%, 콜 105%) 연속 보유 손익. 실제 종가 기준."""
+    f = pd.read_csv(EXT / "study_fut_daily.csv.gz", dtype={"date": str, "exp": str})
+    f = f[f["prod"] == "A01"].copy()
+    f["Date"] = ymd(f.date)
+    fp = f.pivot_table(index="Date", columns="exp", values="close", aggfunc="last").sort_index()
+    exps = sorted(fp.columns)
+    last = {x: fp[x].dropna().index.max() for x in exps}
+    fut_r = pd.Series(np.nan, index=fp.index)
+    front = pd.Series(np.nan, index=fp.index)
+    for i, d in enumerate(fp.index):
+        live = [x for x in exps if last[x] >= d and not np.isnan(fp.at[d, x])]
+        if not live:
+            continue
+        x = live[0]
+        front[d] = fp.at[d, x]
+        if i and not np.isnan(fp.iat[i - 1, fp.columns.get_loc(x)]):
+            fut_r[d] = fp.at[d, x] / fp.iat[i - 1, fp.columns.get_loc(x)] - 1
+    o = pd.read_csv(EXT / "study_opt_daily.csv.gz", dtype={"date": str, "exp": str, "code": str})
+    o = o[o.code.str[:3].isin(["201", "301", "B01", "C01"])].copy()
+    o["Date"] = ymd(o.date)
+    out = {"fut": fut_r.reindex(days).values.astype(np.float32)}
+    info = {}
+    for cp, mny, name in (("P", 0.95, "put"), ("C", 1.05, "call")):
+        oc = o[o.cp == cp]
+        months = sorted(oc.exp.unique())
+        exp_day = {m: oc[oc.exp == m].Date.max() for m in months}
+        r = pd.Series(np.nan, index=fp.index)
+        roll = pd.Series(0, index=fp.index)
+        trades = []
+        cur = None
+        for d in fp.index:
+            if cur is not None:
+                c = cur["px"].get(d)
+                if c is not None and not np.isnan(c):
+                    r[d] = (c - cur["last"]) / cur["f0"]
+                    cur["last"] = c
+                else:
+                    r[d] = 0.0
+                if d >= cur["end"]:
+                    trades.append({"entry": str(cur["d0"].date()), "exit": str(d.date()), "strike": cur["k"], "exp": cur["m"], "entry_price": cur["c0"], "exit_price": cur["last"], "underlying": cur["f0"]})
+                    cur = None
+            if cur is None and not np.isnan(front.get(d, np.nan)):
+                nxt = [m for m in months if exp_day[m] > d + pd.Timedelta(days=10)]
+                if not nxt:
+                    continue
+                m = nxt[0]
+                day = oc[(oc.exp == m) & (oc.Date == d) & (oc.close > 0) & (oc.vol > 0)]
+                if day.empty:
+                    continue
+                row = day.iloc[(day.strike - front[d] * mny).abs().argmin()]
+                if abs(row.strike / front[d] - mny) > 0.03:
+                    continue
+                px = oc[(oc.code == row.code)].set_index("Date").close.to_dict()
+                cur = {"px": px, "last": row.close, "c0": float(row.close), "f0": float(front[d]), "k": float(row.strike), "m": m, "d0": d, "end": exp_day[m]}
+                roll[d] = 1
+                if np.isnan(r[d]):
+                    r[d] = 0.0
+        out[name] = r.reindex(days).values.astype(np.float32)
+        out[name + "_roll"] = roll.reindex(days).fillna(0).values.astype(np.uint8)
+        info[name] = {"n_trades": len(trades), "first": trades[0]["entry"] if trades else None, "last": trades[-1]["exit"] if trades else None, "trades": trades}
+        print(name, len(trades), trades[:1], flush=True)
+    ok = fut_r.reindex(days).dropna()
+    info["fut"] = {"first": str(ok.index.min().date()), "last": str(ok.index.max().date())}
+    return out, info
 
 
 def add_features(df: pd.DataFrame, mkt: pd.Series) -> pd.DataFrame:
@@ -66,8 +246,10 @@ def add_features(df: pd.DataFrame, mkt: pd.Series) -> pd.DataFrame:
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     panel, fr = R.panel(), R.frames()
-    mkt = data.market_proxy(panel)
+    rm = real_market()
+    mkt = rm["KOSPI"].dropna().pct_change().dropna()          # 실제 코스피 지수 일별 수익률
     panel = add_features(panel, mkt)
+    panel, sect = add_real_features(panel)
     groups = {**data.FEATURE_GROUPS, **NEW_GROUPS}
     labels = {**data.FEATURE_LABELS, **NEW_LABELS}
     feats = [f for g in groups.values() for f in g]
@@ -140,7 +322,7 @@ def main():
     slots = np.full((nD, 300), 65535, np.uint16)
     Xd = np.zeros((nD, 300, F), np.int8)
     fwd = np.full((nD, 300, len(HS)), -32768, np.int16)
-    f32 = {k: np.full((nD, 300), np.nan, np.float32) for k in ("next_open", "next_close", "vol_60", "amt20", "Marcap", "listed_days")}
+    f32 = {k: np.full((nD, 300), np.nan, np.float32) for k in ("next_open", "next_close", "vol_60", "amt20", "Marcap", "listed_days", "alert_20")}
     upos = {d: g for d, g in zip(*np.unique(u.Date.values, return_index=True))}
     order = np.argsort(u.Date.values, kind="stable")
     ud_sorted_dates = u.Date.values[order]
@@ -158,18 +340,33 @@ def main():
         for k in f32:
             f32[k][j, :n] = sub[k].values.astype(np.float32)
     kospi = np.array([1 if (panel.loc[panel.Code == c, "Market"].iloc[-1] == "KOSPI") else 0 for c in codes], np.uint8)
-    mk = fr.mkt_ret.reindex(days).fillna(0.0).values.astype(np.float32)
+    assert mkt.reindex(days).notna().all(), "코스피 지수 결측"
+    mk = mkt.reindex(days).values.astype(np.float32)
+    kq = rm["KOSDAQ"].dropna().pct_change().reindex(days).fillna(0.0).values.astype(np.float32)
     un = fr.univ_ret.reindex(days).fillna(0.0).values.astype(np.float32)
-    below = fr.mkt_below_ma.reindex(days).fillna(False).values.astype(np.uint8)
-    mvol = (mkt.rolling(60).std() * np.sqrt(252)).reindex(days).ffill().fillna(0.2).values.astype(np.float32)
+    lvl = rm["KOSPI"].dropna()
+    below = (lvl < lvl.rolling(60).mean()).reindex(days).fillna(False).values.astype(np.uint8)
+    # 해외 지표: 한국 거래일 d 의 결정(종가 이후)은 같은 날짜의 미국 장 마감(다음 날 새벽)까지 반영, 주문은 d+1 시가
+    us = lambda s: rm[s].dropna()
+    nas = us("NASDAQ").pct_change().reindex(days).fillna(0.0).values.astype(np.float32)
+    vix = us("VIX").reindex(days.union(rm.index)).ffill().reindex(days).values.astype(np.float32)
+    fxs = us("USDKRW")
+    fx20 = (fxs / fxs.shift(20) - 1).reindex(days.union(fxs.index)).ffill().reindex(days).fillna(0.0).values.astype(np.float32)
+    prod_lr, prod_meta = real_products(days, rm)
+    drv, drv_info = real_derivs(days)
+    ind = np.array([sect["ind_of"].get(c, -1) for c in codes], np.int16)
 
     arrays = {"core": [("slots", slots), ("X", Xd), ("fwd", fwd)] + [(k, v) for k, v in f32.items()] +
-                      [("kospi", kospi), ("mkt", mk), ("univ", un), ("below", below), ("mvol", mvol), ("gram", gram)],
+                      [("kospi", kospi), ("ind", ind), ("mkt", mk), ("kq", kq), ("univ", un), ("below", below), ("nas", nas), ("vix", vix), ("fx20", fx20),
+                       ("prod", prod_lr)] + list(drv.items()) + [("gram", gram)],
               "px": [("lr", lr_q), ("lo", lo_q)]}
     meta = {"days": [str(d.date()) for d in days], "dec": dec, "codes": codes, "names": [fr.names.get(c, c) for c in codes],
             "features": feats, "feature_labels": labels, "groups": groups, "group_labels": GROUP_LABELS, "horizons": HS,
             "gram_years": years, "gram_width": W, "year_info": yinfo, "dev": [model.DEV_START, model.DEV_END], "final": [model.FINAL_START, model.FINAL_END],
-            "snapshot": data.snapshot_id(), "arrays": {}, "lgb": {}}
+            "snapshot": data.snapshot_id(), "arrays": {}, "lgb": {}, "products": prod_meta, "industries": sect["ind_names"], "derivs": drv_info,
+            "sources": {"stock": "KRX 전종목 일별 시세(FinanceData/marcap)", "index": "코스피·코스닥 지수(네이버 금융)", "flow": "투자자별 순매수 2022-01~, 외국인 보유율 2019-01~(네이버 금융)",
+                        "sector": "업종 79개·테마 265개 구성 종목(네이버 금융, 수집 시점 구성)", "disc": "공시 제목(네이버 금융)", "etf": "ETF 일별 시세(네이버 금융)",
+                        "deriv": "코스피200 선물·옵션 일별 시세(한국투자증권 API)", "us": "미국 주식·지수·환율 일별 시세(야후 파이낸스)"}}
     for fn, lst in arrays.items():
         buf, off = b"", 0
         for name, arr in lst:

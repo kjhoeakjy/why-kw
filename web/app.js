@@ -8,7 +8,7 @@
   const cache = new Map();
   const S = {
     mode: null, tab: 'create', busy: null, logs: [],
-    spec: { groups: ['price', 'volume'], h: 5, algo: 'ridge', k: 5, buf: 1, vf: 0, mf: false, cash: 1000000, preset: 'balanced', x: [], xv: {}, rules: [], target: 'ret', alpha: 100, win: 4, wt: 'eq', ex: 'open', uni: 'all', exf: [], belief: {}, excl: [], only: [], holdings: [] },
+    spec: { groups: ['price', 'volume'], h: 5, algo: 'ridge', k: 5, buf: 1, vf: 0, mf: false, cash: 1000000, preset: 'balanced', x: [], xv: {}, rules: [], target: 'ret', alpha: 100, win: 4, wt: 'eq', ex: 'open', uni: 'all', exf: [], belief: {}, excl: [], only: [], holdings: [], usst: [], inds: [] },
     planNote: null, cur: null, versions: [], opt: null, forked: null, cashDemo: null,
   };
 
@@ -22,9 +22,9 @@
   const GL = () => Object.fromEntries(Object.entries(CAT.feature_groups).map(([k, v]) => [k, v.label]));
   const HL = { 5: '약 1주', 10: '약 2주', 20: '약 1개월', 60: '약 3개월' };
   const horizonLabel = h => ({ 5: '단기(약 1주)', 10: '약 2주', 20: '중기(약 1개월)', 60: '장기(약 3개월)' }[h]);
-  const MYN = { '상위 3배수 이내 보유 유지': '보유 종목 교체 축소', '예측·보유 기간 20거래일': '보유 기간 연장(약 1개월)', '변동성·위험 변수 추가': '하락 위험 정보 추가', '변동성 상위 30% 종목 제외': '변동성 큰 종목 제외', '기업 규모 변수 추가': '기업 규모 정보 추가', '예측·보유 기간 60거래일': '보유 기간 연장(약 3개월)', '장기 추세 변수 추가': '장기 추세 정보 추가', '전체 변수 반영': '전체 정보 반영' };
+  const MYN = { '상위 3배수 이내 보유 유지': '보유 종목 교체 축소', '예측·보유 기간 20거래일': '보유 기간 연장(약 1개월)', '변동성·위험 변수 추가': '하락 위험 정보 추가', '변동성 상위 30% 종목 제외': '변동성 큰 종목 제외', '기업 규모 변수 추가': '기업 규모 정보 추가', '예측·보유 기간 60거래일': '보유 기간 연장(약 3개월)', '투자자별 수급 변수 추가': '투자자별 수급 정보 추가', '업종·테마 변수 추가': '업종·테마 정보 추가', '전체 변수 반영': '전체 정보 반영' };
   const cname = c => S.mode === 'my' ? (MYN[c] || c) : c;
-  const SHORT = { price: '가격 흐름', volume: '거래량', risk: '위험', size: '기업 규모', trend: '장기 추세', pattern: '급등·갭 이력', beta: '시장 민감도', age: '상장 경과' };
+  const SHORT = { price: '가격 흐름', volume: '거래량', risk: '위험', size: '기업 규모', trend: '장기 추세', pattern: '급등·갭 이력', beta: '시장 민감도', age: '상장 경과', flow: '수급', sector: '업종·테마', disc: '공시' };
   const PRESET = { balanced: '수익성·위험 균형', return: '수익성 우선', low_risk: '낙폭 최소화', low_trading: '거래 횟수 최소화' };
   const aiTitle = s => { const x = s.groups.filter(g => g !== 'price'); return (x.length ? x.map(g => SHORT[g]).join('·') : '가격 흐름') + ' 중시 투자 AI'; };
   const verdict = (d, b) => {
@@ -68,12 +68,14 @@
   const xval = (s, id) => xon(s, id) ? +((s.xv || {})[id] ?? XI[id].num.def) : 0;
   const featsOf = s => { const M = LM(); return M.features.filter(f => s.groups.some(g => (M.groups[g] || []).includes(f)) && !(s.exf || []).includes(f)); };
   const labSpec = s => {
-    let c = xval(s, 'p_rp') / 100, l = xval(s, 'p_lev') / 100, i = xval(s, 'p_inv') / 100; const t = c + l + i; if (t > 1) { c /= t; l /= t; i /= t; }
+    let prods = [...Object.entries(PRODX).filter(([k]) => xon(s, k)).map(([k, id]) => ({ id, pct: xval(s, k) / 100 })), ...(s.usst || []).map(x => ({ id: x.id, pct: x.pct / 100 }))];
+    const t = prods.reduce((a, x) => a + x.pct, 0); if (t > 1) prods = prods.map(x => ({ id: x.id, pct: x.pct / t }));
     const fs = featsOf(s), bel = Object.fromEntries(Object.entries(s.belief || {}).filter(([f, v]) => v && fs.includes(f)).sort());
     return { model: { algo: s.algo, feats: fs, h: s.h, target: s.target || 'ret', alpha: s.alpha || 100, win: s.win == null ? 4 : s.win, belief: s.algo === 'ridge' ? bel : {} },
       policy: { k: s.k, h: s.h, buf: s.buf, vf: s.vf, mf: s.mf ? 1 : 0, wt: s.wt || 'eq', ex: s.ex || 'open', uni: s.uni || 'all', nonew: xon(s, 'nonew') ? 1 : 0, excl: [...(s.excl || [])].sort(), only: s.uni === 'watch' ? [...(s.only || [])].sort() : [],
-        stop: xval(s, 'stop') / 100, take: xval(s, 'take') / 100, dayLimit: xval(s, 'daily') / 100, floor: xval(s, 'floor') / 100, wcap: xval(s, 'wcap') / 100, cost: 'kr_default' },
-      portfolio: { cash: s.cash, cashPct: c, levPct: l, invPct: i, hedge: (xval(s, 'p_fut') || xval(s, 'p_futd')) / 100, hedgeCond: xon(s, 'p_futd') ? 'down' : '', put: xval(s, 'p_put') / 100, call: xval(s, 'p_call') / 100, holdings: (s.holdings || []).map(h => ({ code: h.code, amt: h.amt })) } };
+        stop: xval(s, 'stop') / 100, take: xval(s, 'take') / 100, dayLimit: xval(s, 'daily') / 100, floor: xval(s, 'floor') / 100, wcap: xval(s, 'wcap') / 100, scap: xval(s, 'scap') / 100,
+        noalert: xon(s, 'noalert') ? 1 : 0, inds: s.uni === 'sector' ? [...(s.inds || [])].sort() : [], nasStop: xval(s, 'nas') / 100, vixStop: xval(s, 'vix'), fxStop: xval(s, 'fx') / 100, cost: 'kr_default' },
+      portfolio: { cash: s.cash, prods, hedge: (xval(s, 'p_fut') || xval(s, 'p_futd')) / 100, hedgeCond: xon(s, 'p_futd') ? 'down' : '', put: xval(s, 'p_put') / 100, call: xval(s, 'p_call') / 100, holdings: (s.holdings || []).map(h => ({ code: h.code, amt: h.amt })) } };
   };
   const keyOf = s => JSON.stringify(labSpec(s));
   const sameSpec = (a, b) => keyOf(a) === keyOf(b);
@@ -93,6 +95,7 @@
     if (cache.has(key)) return cache.get(key);
     if (!ls.model.feats.length) throw new Error('학습 변수 미선택');
     if (s.uni === 'watch' && !ls.policy.only.length) throw new Error('관심 종목 미입력');
+    if (s.uni === 'sector' && !ls.policy.inds.length) throw new Error('관심 업종 미입력');
     if (ls.model.algo === 'lightgbm' && (ls.model.target !== 'ret' || !Lab.lgbAvailable(ls.model))) throw new Error('트리 기반 학습 미제공 조합');
     const r = await Lab.run(ls);
     r.costs = {};
@@ -161,7 +164,7 @@
   const stage = m => /^\[자료/.test(m) ? '학습 자료 수신' : /^\[설정/.test(m) ? '투자 기준 확인' : /재사용/.test(m) ? '기존 모델 확인' : /학습/.test(m) ? '모델 학습' : /가상 체결/.test(m) ? '가상 운용 검증' : /후보|연구 계획|제외/.test(m) ? '개선 후보 비교' : '계산 준비';
   const tabs = () => !S.mode ? '' : `<nav class="tabs"><div>${(S.mode === 'qs' ? [['create', '연구', 'set'], ['validate', '검증', 'chart'], ['optimize', '최적화', 'up'], ['versions', '버전', 'list']] : [['validate', '홈', 'home'], ['create', '설정', 'set'], ['optimize', '개선', 'up'], ['versions', '기록', 'list']])
     .map(([k, l, ic]) => `<button data-act="tab" data-v="${k}" aria-current="${S.tab === k}">${ICON[ic]}<span>${l}</span></button>`).join('')}</div></nav>`;
-  const disclosures = () => `<details class="disc"><summary>투자 유의 사항</summary><ul>${CAT.disclosures.map(d => `<li>${esc(d)}</li>`).join('')}<li>지수 선물·옵션·레버리지 상품은 코스피 대용 지수와 옵션 이론가 기준 가정 계산이며 실제 시세와 차이 발생 가능</li><li>과제 시연용 화면이며 키움증권의 실제 서비스가 아님</li></ul>
+  const disclosures = () => `<details class="disc"><summary>투자 유의 사항</summary><ul>${CAT.disclosures.map(d => `<li>${esc(d)}</li>`).join('')}<li>ETF·선물·옵션·미국 주식은 실제 일별 종가 기준이며 분배금, 선물·옵션 계약 단위와 증거금 미반영</li><li>과제 시연용 화면이며 키움증권의 실제 서비스가 아님</li></ul>
     데이터: ${esc(CAT.data.source)} · ${CAT.data.start}~${CAT.data.end}</details>`;
 
   function landing() {
@@ -182,28 +185,32 @@
         <p class="sub" style="margin:8px 2px 0">AI 학습, 과거 데이터 검증, 설정 공유</p>
         ${S.acct ? `<div class="note" style="margin-top:14px"><b>계좌 연결 후 제공 기능</b><br>보유 종목·현금 기준 AI 학습<br>나의 거래 내역 기반 학습<br>자동 매수·매도(주문 한도, 주문 전 승인)<br>주간·월간 운용 보고서<br><span class="muted">시연 화면은 계좌 연결 미지원. 계좌 없이 시작으로 체험 가능</span></div>` : ''}</div>
       <details class="card info" ${window.matchMedia('(min-width:1000px)').matches ? 'open' : ''}><summary>서비스 안내</summary>
-        <div class="kv"><span>설정 항목</span><span>${N_REAL + N_X}개(실제 계산 반영 ${N_REAL}개, 설계안 ${N_X}개), 규칙 직접 입력</span></div>
+        <div class="kv"><span>설정 항목</span><span>${N_REAL}개, 전 항목 실제 데이터 계산, 규칙 직접 입력</span></div>
         <div class="kv"><span>검증 방식</span><span>실제 과거 시세, 거래 비용 반영</span></div>
-        <div class="kv"><span>사용 데이터</span><span>국내주식 일봉 ${CAT.data.start.slice(0, 4)}~${CAT.data.end.slice(0, 7)}</span></div>
+        <div class="kv"><span>사용 데이터</span><span>실제 일별 시세 ${CAT.data.start.slice(0, 4)}~${CAT.data.end.slice(0, 7)}</span></div>
         <div class="kv"><span>이용 조건</span><span>계좌 개설 불필요, 주문 미연결</span></div>
-        <div class="kv"><span>상품 범위</span><span>국내주식, 현금성 자산, 지수 선물·옵션, 레버리지·인버스 계산 반영(지수 대용·이론가 가정). 해외주식·ETF·채권 설계안</span></div>
+        <div class="kv"><span>상품 범위</span><span>국내주식, 국내 ETF(채권·해외 지수·금·달러·레버리지·인버스·커버드콜), 미국 주식, 코스피200 선물·옵션</span></div>
+        <div class="kv"><span>학습 자료</span><span>시세, 투자자별 수급, 업종·테마, 공시·시장경보, 해외 지수·환율</span></div>
         <div class="kv"><span>시연 범위</span><span>설정 변경 시 화면에서 직접 학습·가상 운용</span></div></details></div>
       ${disclosures()}`;
   }
 
   /* ---------- 설정 항목 ----------
-     채움 표시: 브라우저에서 실제 계산에 반영하는 항목. 테두리 표시: 설계안(자료 미확보, 선택 내용 기록). */
+     전 항목을 실제 자료로 브라우저에서 계산한다. */
   const R = (act, k, v, l, o = {}) => ({ real: 1, act, k, v, l, b: 1, ...o });
   const X = (id, l, o = {}) => ({ id, l, ...o });
   const L = (rg, l) => ({ real: 1, act: 'lock', rg, l });
   const N = (def, unit, min, max, o = {}) => ({ num: { def, unit, min, max }, live: 1, ...o });
-  const DV = ['p_fut', 'p_futd', 'p_put', 'p_call', 'p_lev', 'p_inv'];
-  const UNI = { all: '거래대금 상위 300종목', kospi: '코스피 종목 한정', top200: '시가총액 상위 200종목', top100: '시가총액 상위 100종목', watch: '관심 종목 한정' };
+  const DV = ['p_fut', 'p_futd', 'p_put', 'p_call', 'p_cc', 'p_lev', 'p_inv', 'p_inv2'];
+  const PRODX = { p_k200: 'E069500', p_rp: 'E153130', p_bond: 'E114260', p_bond10: 'E148070', p_usb: 'E305080', p_us: 'E143850', p_nas: 'E133690', p_gold: 'E132030', p_usd: 'E261240', p_cc: 'E289480', p_lev: 'E122630', p_inv: 'E114800', p_inv2: 'E252670' };
+  const UNI = { all: '거래대금 상위 300종목', kospi: '코스피 종목 한정', top200: '시가총액 상위 200종목', top100: '시가총액 상위 100종목', sector: '관심 업종 한정', watch: '관심 종목 한정' };
   const WT = { eq: '동일 비중', score: '점수 순위 비례', ivol: '변동성 역비례' };
   const BEL = [['상승 추세 종목 선호', { mom_60: 1, mom_120: 1, high252_ratio: 1 }, []], ['단기 낙폭 과대 종목 선호', { mom_5: -1, ma20_gap: -1 }, []],
-    ['저변동 종목 선호', { vol_60: -1, downside_vol_60: -1 }, ['risk']], ['대형주 선호', { log_marcap: 1 }, ['size']], ['거래 활발 종목 선호', { turnover20: 1, log_amt20: 1 }, ['volume']]];
+    ['저변동 종목 선호', { vol_60: -1, downside_vol_60: -1 }, ['risk']], ['대형주 선호', { log_marcap: 1 }, ['size']], ['거래 활발 종목 선호', { turnover20: 1, log_amt20: 1 }, ['volume']],
+    ['외국인 순매수 종목 선호', { frgn_5: 1, frgn_20: 1 }, ['flow']], ['기관 순매수 종목 선호', { inst_5: 1, inst_20: 1 }, ['flow']], ['강세 업종 종목 선호', { ind_ret_20: 1 }, ['sector']]];
   const belOn = (s, m) => Object.entries(m).every(([f, v]) => (s.belief || {})[f] === v);
   const nameOf = c => { const M = LM(), i = M ? M.codes.indexOf(c) : -1; return i >= 0 ? M.names[i] : c; };
+  const prodOf = id => { const M = LM(); return M ? M.products.find(p => p.id === id) : null; };
   const stockBox = (key, label, amt) => {
     if (!LM()) return `<p class="muted">${label}: 종목 목록 수신 중</p>`;
     const list = S.spec[key] || [];
@@ -211,77 +218,77 @@
       ${amt ? `<span class="num"><input type="number" id="stka_${key}" value="500" min="1" inputmode="numeric" aria-label="보유 금액">만 원</span>` : ''}<button class="btn ghost small" data-act="stkadd" data-v="${key}">추가</button></div>
       ${list.length ? `<div class="chips">${list.map((x, i) => `<button class="chip" aria-pressed="true" data-act="stkdel" data-k="${key}" data-v="${i}">${esc(nameOf(amt ? x.code : x))}${amt ? ' ' + man(x.amt) : ''} 삭제</button>`).join('')}</div>` : ''}</div>`;
   };
+  const pickBox = (key, label, opts, pct) => {
+    if (!LM()) return `<p class="muted">${label}: 목록 수신 중</p>`;
+    const list = S.spec[key] || [];
+    return `<div class="stk"><label class="f">${label}</label><div class="stkrow"><select id="pk_${key}" aria-label="${label}">${opts.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join('')}</select>
+      ${pct ? `<span class="num"><input type="number" id="pka_${key}" value="10" min="1" max="100" inputmode="numeric" aria-label="비중">%</span>` : ''}<button class="btn ghost small" data-act="pkadd" data-v="${key}">추가</button></div>
+      ${list.length ? `<div class="chips">${list.map((x, i) => `<button class="chip" aria-pressed="true" data-act="stkdel" data-k="${key}" data-v="${i}">${esc(pct ? (prodOf(x.id) || {}).name + ' ' + x.pct + '%' : x)} 삭제</button>`).join('')}</div>` : ''}</div>`;
+  };
   const featBox = s => {
     const M = LM(); if (!M) return '<p class="muted">변수 목록 수신 중</p>';
     const all = M.features.filter(f => s.groups.some(g => (M.groups[g] || []).includes(f)));
     return `<details class="sub2"><summary>변수별 선택(${featsOf(s).length}/${all.length}개 사용)</summary><div class="chips">${all.map(f => `<button class="chip sm" data-act="feat" data-v="${f}" aria-pressed="${!(s.exf || []).includes(f)}">${esc(M.feature_labels[f])}</button>`).join('')}</div></details>`;
   };
+  const P = (id, l, def, o = {}) => X(id, l + ' 비중', N(def, '%', 1, 100, o));
   const SEC = [
     { id: 'me', l: '성향·자산', d: '투자 성향과 자산 현황', g: [
       { t: '투자 성향', items: Object.keys(PRESET).map(k => R('set', 'preset', k, PRESET[k])), n: '전략 후보 비교 시 우선순위 기준' },
-      { t: '투자 경험', items: [X('exp1', '1년 미만', { rg: 'exp', live: 1 }), X('exp2', '1~5년', { rg: 'exp', live: 1 }), X('exp3', '5년 이상', { rg: 'exp', live: 1 })], n: '1년 미만 선택 시 파생상품·레버리지 상품 선택 제한(적합성 기준 가정)' },
-      { t: '투자 목적', items: [X('goal1', '목돈 마련', { b: 1 }), X('goal2', '노후 대비', { b: 1 }), X('goal3', '단기 수익', { b: 1 }), X('goal4', '정기 현금 수입', { b: 1 })] },
-      { t: '자산 현황', wide: 1, items: [X('hold', '계좌 보유 내역 연동', { acct: 1 }), X('asset2', '타 금융자산 직접 입력'), X('monthly', '월 적립 금액', { num: { def: 50, unit: '만 원', min: 1, max: 10000 } }), X('loan', '대출·신용 사용 여부')],
-        extra: () => stockBox('holdings', '보유 종목 직접 입력', true), n: '입력한 보유 종목은 검증 기간 계속 보유 가정, AI 선정 대상에서 제외' },
+      { t: '투자 경험', items: [X('exp1', '1년 미만', { rg: 'exp', live: 1 }), X('exp2', '1~5년', { rg: 'exp', live: 1 }), X('exp3', '5년 이상', { rg: 'exp', live: 1 })], n: '1년 미만 선택 시 파생상품·레버리지 상품 선택 제한' },
+      { t: '자산 현황', wide: 1, items: [], extra: () => stockBox('holdings', '보유 종목 입력', true), n: '입력한 보유 종목은 실제 시세로 검증 기간 계속 보유 기준 반영, AI 선정 대상에서 제외' },
       { t: '손실 감내 수준', items: [X('tol', '연간 손실 허용 한도', N(10, '%', 1, 100))], n: '검증 기간 중 연간 손실이 한도를 초과한 설정은 부적합 판정' },
     ] },
     { id: 'prod', l: '투자 상품', d: '전략에 포함할 상품 유형', g: [
-      { t: '주식', items: [L('prodbase', '국내주식'), X('p_us', '해외주식', { b: 1 }), X('p_etf', '상장지수펀드(ETF)', { b: 1 }), X('p_reit', '리츠')] },
-      { t: '채권·현금성', items: [X('p_rp', '현금성 자산(RP·발행어음) 비중', N(30, '%', 1, 100, { b: 1 })), X('p_bond', '채권'), X('p_fund', '펀드')], n: '현금성 자산 금리 연 3% 가정' },
-      { t: '파생상품·레버리지', wide: 1, items: [X('p_fut', '지수 선물 매도 헤지(상시)', N(50, '%', 1, 100, { rg: 'fut', b: 1 })), X('p_futd', '지수 선물 매도 헤지(하락장 한정)', N(50, '%', 1, 100, { rg: 'fut' })),
-        X('p_put', '보호적 풋옵션 매수', N(100, '%', 1, 100, { b: 1 })), X('p_call', '커버드 콜 매도', N(100, '%', 1, 100)), X('p_lev', '레버리지(2배) 상품 비중', N(20, '%', 1, 100)), X('p_inv', '인버스 상품 비중', N(10, '%', 1, 100)),
-        X('p_elw', '주식워런트증권(ELW)'), X('p_els', '주가연계증권(ELS)·파생결합증권(DLS)')], n: '코스피 대용 지수와 옵션 이론가 기준 가정 계산(실제 선물·옵션 시세 미반영). 비율은 주식 평가금액 대비. 투자 경험 1년 미만 선택 제한' },
-      { t: '활용 목적', items: [X('u_hedge', '보유 자산 위험 회피'), X('u_income', '추가 수익'), X('u_alloc', '자산 배분')] },
+      { t: '국내주식', items: [L('prodbase', '국내주식(AI 선정)'), P('p_k200', 'KODEX 200', 20)] },
+      { t: '현금성·채권', items: [P('p_rp', 'KODEX 단기채권', 30, { b: 1 }), P('p_bond', 'KODEX 국고채3년', 20), P('p_bond10', 'KIWOOM 국고채10년', 20, { b: 1 }), P('p_usb', 'TIGER 미국채10년선물', 10)] },
+      { t: '해외주식', wide: 1, items: [P('p_us', 'TIGER 미국S&P500선물(H)', 20, { b: 1 }), P('p_nas', 'TIGER 미국나스닥100', 20)],
+        extra: () => pickBox('usst', '미국 주식 직접 편입', (LM().products || []).filter(p => p.cat === '해외주식').map(p => [p.id, `${p.name}(${p.code})`]), true), n: '미국 주식은 직전 미국 장 종가와 당일 원/달러 환율 기준 원화 환산' },
+      { t: '원자재·통화', items: [P('p_gold', 'KODEX 골드선물(H)', 10, { b: 1 }), P('p_usd', 'KODEX 미국달러선물', 10)] },
+      { t: '파생상품·레버리지', wide: 1, items: [X('p_fut', '코스피200 선물 매도 헤지(상시)', N(50, '%', 1, 100, { rg: 'fut', b: 1 })), X('p_futd', '코스피200 선물 매도 헤지(하락장 한정)', N(50, '%', 1, 100, { rg: 'fut' })),
+        X('p_put', '코스피200 풋옵션 매수', N(100, '%', 1, 100, { b: 1 })), X('p_call', '코스피200 콜옵션 매도', N(100, '%', 1, 100)), P('p_cc', 'TIGER 200커버드콜', 20), P('p_lev', 'KODEX 레버리지', 20), P('p_inv', 'KODEX 인버스', 10), P('p_inv2', 'KODEX 200선물인버스2X', 10)],
+        n: '전 상품 실제 일별 시세 기준. 선물·옵션 비율은 주식 평가금액 대비이며 자료 기간(선물 2022년 3월 이후, 옵션 2024년 3월 이후)에 한해 적용. 투자 경험 1년 미만 선택 제한' },
     ] },
     { id: 'data', l: '데이터', d: 'AI가 학습할 자료', g: [
-      { t: '시세·거래', wide: 1, items: [R('grp', '', 'price', '가격 흐름(필수)'), R('grp', '', 'volume', '거래량'), R('grp', '', 'risk', '하락 위험'), R('grp', '', 'size', '기업 규모'), R('grp', '', 'trend', '장기 추세'), R('grp', '', 'pattern', '급등·갭 이력'), R('grp', '', 'beta', '시장 민감도'), R('grp', '', 'age', '상장 경과'),
-        X('minute', '1분 단위 시세'), X('pre', '장 시작 전 예상 체결'), X('nxt', '대체거래소·시간외 시세')], extra: s => featBox(s) },
-      { t: '수급', items: [X('frg', '외국인 순매수', { b: 1 }), X('inst', '기관 순매수', { b: 1 }), X('indiv', '개인 순매수'), X('prog', '프로그램 매매'), X('short', '공매도·대차 잔고')] },
-      { t: '기업 정보', items: [X('fin', '실적·재무', { b: 1 }), X('div', '배당', { b: 1 }), X('rep', '애널리스트 보고서', { b: 1 }), X('dart', '공시')] },
-      { t: '뉴스·비정형 자료', items: [X('newsT', '뉴스 제목', { b: 1 }), X('newsB', '뉴스 본문'), X('board', '종목토론방 게시글'), X('llm', '언어 모형 판독 점수'), X('search', '검색량·소셜 미디어 언급량')] },
-      { t: '업종·테마', items: [X('sector', '업종 동향', { b: 1 }), X('theme', '테마 동향'), X('rank', '거래 상위 종목 출현 횟수')] },
-      { t: '시장·해외', items: [X('us', '미국 지수(전일 밤)', { b: 1 }), X('fx', '환율'), X('breadth', '상승·하락 종목 비율'), X('rate', '금리·원자재')] },
-      { t: '제도·일정', items: [X('alert', '시장경보·거래정지·관리종목'), X('cal', '옵션 만기일·요일')] },
-      { t: '나의 자료', items: [X('trades', '나의 거래 내역', { acct: 1 }), X('watch', '관심 종목 시세 알림'), X('file', '직접 등록 자료(파일)')] },
+      { t: '시세·거래', wide: 1, items: [R('grp', '', 'price', '가격 흐름(필수)'), R('grp', '', 'volume', '거래량'), R('grp', '', 'risk', '하락 위험'), R('grp', '', 'size', '기업 규모'), R('grp', '', 'trend', '장기 추세', { b: 0 }), R('grp', '', 'pattern', '급등·갭 이력', { b: 0 }), R('grp', '', 'beta', '시장 민감도', { b: 0 }), R('grp', '', 'age', '상장 경과', { b: 0 })] },
+      { t: '수급·업종·공시', wide: 1, items: [R('grp', '', 'flow', '투자자별 수급'), R('grp', '', 'sector', '업종·테마 동향'), R('grp', '', 'disc', '공시·시장경보')], extra: s => featBox(s),
+        n: '외국인·기관·개인 순매수 2022년 이후, 외국인 보유율 2019년 이후 자료. 자료가 없는 기간과 종목은 해당 변수 미반영. 업종·테마는 수집 시점 구성 기준' },
     ] },
     { id: 'model', l: '모델', d: '학습 방식과 예측 대상', g: [
-      { t: '학습 방식', items: [R('set', 'algo', 'ridge', '선형 회귀(Ridge)'), R('set', 'algo', 'lightgbm', '트리 기반(LightGBM)'), X('gru', '순환 신경망(GRU)'), X('tabpfn', '사전 학습 표 모형(TabPFN)'), X('mlp', '다층 신경망(MLP)'), X('ens', '복수 모형 결합')],
+      { t: '학습 방식', items: [R('set', 'algo', 'ridge', '선형 회귀(Ridge)'), R('set', 'algo', 'lightgbm', '트리 기반(LightGBM)')],
         n: '선형 회귀는 화면에서 즉시 학습. 트리 기반은 가격·거래량·위험·규모 조합, 약 1주·약 1개월 예측에 한해 사전 학습 결과 사용' },
-      { t: '예측 기간', items: [R('set', 'h', 5, '약 1주'), R('set', 'h', 10, '약 2주'), R('set', 'h', 20, '약 1개월'), R('set', 'h', 60, '약 3개월'), X('d1', '다음 거래일'), X('gap', '다음 거래일 시가 변동')], n: '예측 기간과 보유 기간 동일 적용' },
+      { t: '예측 기간', items: [R('set', 'h', 5, '약 1주'), R('set', 'h', 10, '약 2주'), R('set', 'h', 20, '약 1개월'), R('set', 'h', 60, '약 3개월')], n: '예측 기간과 보유 기간 동일 적용' },
       { t: '학습 목표', items: [R('set', 'target', 'ret', '수익률 크기'), R('set', 'target', 'up', '대상 종목 평균 초과 여부')] },
       { t: '규제 강도', items: [R('set', 'alpha', 1, '약함'), R('set', 'alpha', 100, '기본'), R('set', 'alpha', 10000, '강함')], n: '선형 회귀 적용 항목. 강할수록 변수별 반영 비중 차이 축소' },
       { t: '학습 구간', items: [R('set', 'win', 4, '직전 4년'), R('set', 'win', 2, '직전 2년'), R('set', 'win', 0, '전체 기간')], n: '선형 회귀 적용 항목' },
-      { t: '재학습 주기', items: [L('freq', '연 1회'), X('fm', '월 1회', { rg: 'freq' }), X('fw', '주 1회', { rg: 'freq' })] },
-      { t: '보조 모형', items: [X('calib', '예측 확률 보정'), X('meta', '매수 여부 재판정(메타 라벨링)'), X('rerank', '상위 후보 재순위'), X('llmread', '뉴스·공시 판독(언어 모형)')] },
     ] },
     { id: 'op', l: '운용', d: '종목 선정과 매매 방식', g: [
       { t: '보유 기간', items: [R('set', 'h', 5, '약 1주'), R('set', 'h', 10, '약 2주'), R('set', 'h', 20, '약 1개월'), R('set', 'h', 60, '약 3개월')], hideAdv: 1 },
       { t: '종목 수', items: [R('set', 'k', 3, '3종목'), R('set', 'k', 5, '5종목'), R('set', 'k', 10, '10종목'), R('set', 'k', 20, '20종목'), R('set', 'k', 30, '30종목')] },
       { t: '교체 방식', items: [R('set', 'buf', 1, '정기 교체'), R('set', 'buf', 3, '보유 유지 우선')] },
       { t: '비중 배분', items: Object.keys(WT).map(k => R('set', 'wt', k, WT[k])) },
-      { t: '체결 시점', items: [R('set', 'ex', 'open', '익일 시가'), R('set', 'ex', 'close', '익일 종가'), X('exsplit', '장중 분할 체결')] },
-      { t: '대상 종목', wide: 1, items: [...Object.keys(UNI).map(k => R('set', 'uni', k, UNI[k])), X('usec', '관심 업종 한정'), X('uetf', '상장지수펀드(ETF) 포함')],
-        extra: () => stockBox('only', '관심 종목', false) + stockBox('excl', '제외 종목', false) },
-      { t: '가상 투자금', items: [R('set', 'cash', 1000000, '100만 원'), R('set', 'cash', 5000000, '500만 원'), R('set', 'cash', 10000000, '1,000만 원'), R('set', 'cash', 50000000, '5,000만 원'), R('set', 'cash', 100000000, '1억 원'), X('cashacct', '계좌 잔고 기준', { acct: 1 })] },
+      { t: '체결 시점', items: [R('set', 'ex', 'open', '익일 시가'), R('set', 'ex', 'close', '익일 종가')] },
+      { t: '대상 종목', wide: 1, items: Object.keys(UNI).map(k => R('set', 'uni', k, UNI[k])),
+        extra: () => pickBox('inds', '관심 업종', (LM().industries || []).map(n => [n, n]), false) + stockBox('only', '관심 종목', false) + stockBox('excl', '제외 종목', false) },
+      { t: '가상 투자금', items: [R('set', 'cash', 1000000, '100만 원'), R('set', 'cash', 5000000, '500만 원'), R('set', 'cash', 10000000, '1,000만 원'), R('set', 'cash', 50000000, '5,000만 원'), R('set', 'cash', 100000000, '1억 원')] },
     ] },
     { id: 'risk', l: '위험 관리', d: '손실 한도와 회피 조건', g: [
-      { t: '회피 조건', items: [R('tog', 'vf', '', '변동성 큰 종목 제외'), R('tog', 'mf', '', '하락장 신규 매수 중단'), X('nonew', '상장 1년 미만 종목 제외', { live: 1 }), X('noalert', '시장경보 종목 제외')] },
+      { t: '회피 조건', items: [R('tog', 'vf', '', '변동성 큰 종목 제외'), X('nonew', '상장 1년 미만 종목 제외', { live: 1 }), X('noalert', '최근 20일 시장경보 지정 종목 제외', { live: 1 })] },
+      { t: '신규 매수 중단 조건', wide: 1, items: [R('tog', 'mf', '', '코스피 60일 평균 하회'), X('nas', '직전 미국 나스닥 하락률', N(2, '% 이상', 0.5, 10)), X('vix', '미국 변동성 지수(VIX)', N(30, '이상', 10, 80)), X('fx', '원/달러 환율 20일 상승률', N(3, '% 이상', 1, 20))], n: '교체 결정일 기준 조건 충족 시 신규 매수 생략' },
       { t: '손실·이익 기준', items: [X('stop', '종목별 손절 기준', N(10, '%', 1, 50)), X('take', '종목별 이익 실현 기준', N(20, '%', 1, 200)), X('daily', '일일 손실 한도(전량 매도)', N(5, '%', 1, 30)), X('floor', '원금 보호선(도달 시 운용 중단)', N(70, '%', 10, 100))], n: '종가 기준 판정, 다음 거래일 매도' },
-      { t: '편중 제한', items: [X('wcap', '종목당 비중 상한', N(15, '%', 1, 100)), X('scap', '업종당 비중 상한', { num: { def: 40, unit: '%', min: 1, max: 100 } })] },
-      { t: '주문 통제', items: [X('approve', '주문 전 본인 승인', { acct: 1 }), X('olimit', '일일 주문 한도', { acct: 1 }), X('pause', '손실 한도 도달 시 주문 중단', { acct: 1 })] },
+      { t: '편중 제한', items: [X('wcap', '종목당 비중 상한', N(15, '%', 1, 100)), X('scap', '업종당 비중 상한', N(40, '%', 1, 100))] },
     ] },
     { id: 'mine', l: '나의 판단', d: '직접 입력하는 판단과 규칙', g: [] },
   ];
   const GG = (sec, t) => SEC.find(x => x.id === sec).g.find(g => g.t === t);
   const XI = {};
   SEC.forEach(sc => sc.g.forEach(g => g.items.forEach(i => { if (!i.real) XI[i.id] = { ...i, sec: sc.id, t: g.t }; })));
-  const N_REAL = SEC.flatMap(sc => sc.g).filter(g => !g.hideAdv).flatMap(g => g.items).filter(i => (i.real && i.act !== 'lock') || i.live).length + 4, N_X = Object.values(XI).filter(i => !i.live).length;
+  const N_REAL = SEC.flatMap(sc => sc.g).filter(g => !g.hideAdv).flatMap(g => g.items).filter(i => (i.real && i.act !== 'lock') || i.live).length + 6;
   const xLabel = (s, id) => XI[id].l + (XI[id].num ? ' ' + ((s.xv || {})[id] ?? XI[id].num.def) + XI[id].num.unit : '');
   const xNames = s => (s.x || []).filter(id => XI[id] && !XI[id].live).map(id => xLabel(s, id));
-  const nPlan = s => xNames(s).length + (s.rules || []).length;
-  const prodList = s => ['국내주식', ...(s.x || []).filter(id => XI[id] && XI[id].live && XI[id].sec === 'prod').map(id => xLabel(s, id)), (s.holdings || []).length ? `보유 종목 ${s.holdings.length}개` : null].filter(Boolean);
+  const nPlan = () => 0;
+  const prodList = s => ['국내주식', ...(s.x || []).filter(id => XI[id] && XI[id].live && XI[id].sec === 'prod').map(id => xLabel(s, id).replace(' 비중', '')), ...(s.usst || []).map(x => `${(prodOf(x.id) || { name: x.id }).name} ${x.pct}%`), (s.holdings || []).length ? `보유 종목 ${s.holdings.length}개` : null].filter(Boolean);
   const condList = s => [s.buf > 1 ? '보유 종목 교체 축소' : null, s.vf > 0 ? '변동성 큰 종목 제외' : null, s.mf ? '하락장 신규 매수 중단' : null,
-    ...(s.x || []).filter(id => XI[id] && XI[id].live && XI[id].sec === 'risk').map(id => xLabel(s, id)), (s.excl || []).length ? `제외 종목 ${s.excl.length}개` : null].filter(Boolean);
+    ...(s.x || []).filter(id => XI[id] && XI[id].live && XI[id].sec === 'risk').map(id => xLabel(s, id)), (s.excl || []).length ? `제외 종목 ${s.excl.length}개` : null, s.uni === 'sector' && (s.inds || []).length ? `관심 업종 ${s.inds.length}개` : null].filter(Boolean);
   const belCount = s => Object.entries(s.belief || {}).filter(([f, v]) => v && (!LM() || featsOf(s).includes(f))).length;
   const judgeList = s => [belCount(s) ? `변수 방향 지정 ${belCount(s)}개` : null, (s.rules || []).length ? `규칙 ${s.rules.length}건` : null].filter(Boolean);
 
@@ -299,7 +306,7 @@
   }
   const groupCard = (g, s, basic) => {
     const items = basic ? g.items.filter(i => i.b) : g.items;
-    return items.length ? `<div class="card grp ${g.wide && !basic ? 'wide' : ''}"><h3>${g.t}</h3><div class="chips">${items.map(i => itemChip(i, s)).join('')}</div>${g.extra && !basic ? g.extra(s) : ''}${g.n ? `<p class="muted">${g.n}</p>` : ''}</div>` : '';
+    return items.length || (g.extra && !basic) ? `<div class="card grp ${g.wide && !basic ? 'wide' : ''}"><h3>${g.t}</h3><div class="chips">${items.map(i => itemChip(i, s)).join('')}</div>${g.extra && !basic ? g.extra(s) : ''}${g.n ? `<p class="muted">${g.n}</p>` : ''}</div>` : '';
   };
   const belCard = (s, detail) => {
     const M = LM(), fs = M && detail ? featsOf(s) : [];
@@ -308,24 +315,24 @@
       <p class="muted">본인이 지정한 방향과 반대로 학습된 변수는 학습에서 제외. 선형 회귀 적용 항목</p></div>`;
   };
   const ruleCard = s => `<div class="card grp wide"><h3>나의 규칙 입력</h3>
-      <textarea id="nl" placeholder="예: 손절 7%, 삼성전자 제외, 대형주 위주 10종목, 하락장에는 선물로 헤지, 현금 비중 30%"></textarea>
+      <textarea id="nl" placeholder="예: 외국인이 사는 종목 위주, 손절 7%, 삼성전자 제외, 나스닥 2% 넘게 빠지면 매수 중단, 국고채 20%"></textarea>
       <button class="btn ghost small" data-act="nl">규칙 추가</button>
       ${S.planNote ? `<div class="note">${S.planNote}</div>` : ''}
       ${(s.rules || []).length ? `<div class="rules">${s.rules.map((r, i) => `<div class="kv"><span>${esc(r)}</span><button class="del" data-act="rdel" data-v="${i}" aria-label="규칙 삭제">삭제</button></div>`).join('')}</div>` : ''}
-      <p class="muted">문장 입력 가능. 손절·익절 기준, 종목 제외, 종목 수, 대상 종목, 상품 비중, 선호 방향은 계산 반영. 그 외 문장은 기록 처리(규칙 기반 해석)</p></div>`;
+      <p class="muted">문장 입력 가능. 손절·익절 기준, 종목 제외, 종목 수, 대상 종목, 상품 비중, 수급·업종 선호, 해외 시장 조건을 해석하여 계산 반영(규칙 기반 해석)</p></div>`;
 
   function createMy() {
     const s = S.spec, adv = !!S.adv, sec = SEC.find(x => x.id === (S.sec || 'me')) || SEC[0];
-    const legend = `<p class="lg"><span><b class="dot on"></b>실제 계산 반영</span><span><b class="dot"></b>설계안(자료 미확보, 선택 내용 기록)</span></p>`;
+    const legend = `<p class="lg"><span><b class="dot on"></b>전 항목 실제 데이터 기준 계산</span></p>`;
     let main;
     if (!adv) {
       const bas = id => SEC.find(x => x.id === id).g.flatMap(g => g.items.filter(i => i.b || i.act === 'lock'));
       const wide = (h, items) => `<div class="card grp wide"><h3>${h}</h3><div class="chips">${items.map(i => itemChip(i, s)).join('')}</div></div>`;
       main = `<div class="gg">${groupCard(GG('me', '투자 성향'), s)}${groupCard(GG('me', '투자 경험'), s)}${wide('투자 상품', bas('prod'))}${wide('중시하는 정보', bas('data'))}
-        ${groupCard(GG('op', '보유 기간'), s)}${groupCard(GG('op', '가상 투자금'), s, true)}<div class="card grp wide"><h3>자산 현황</h3>${stockBox('holdings', '보유 종목 직접 입력', true)}<p class="muted">입력한 보유 종목은 검증 기간 계속 보유 가정, AI 선정 대상에서 제외</p></div>${belCard(s, false)}${ruleCard(s)}</div>`;
+        ${groupCard(GG('op', '보유 기간'), s)}${groupCard(GG('op', '가상 투자금'), s, true)}<div class="card grp wide"><h3>자산 현황</h3>${stockBox('holdings', '보유 종목 입력', true)}<p class="muted">입력한 보유 종목은 실제 시세로 검증 기간 계속 보유 기준 반영, AI 선정 대상에서 제외</p></div>${belCard(s, false)}${ruleCard(s)}</div>`;
     } else if (sec.id === 'mine') {
       main = `<div class="gg">${belCard(s, true)}${ruleCard(s)}
-        <div class="card grp wide"><h3>키움증권 계좌 연계 항목 <span class="badge">설계안</span></h3>
+        <div class="card grp wide"><h3>키움증권 계좌 개설 고객 제공 기능 <span class="badge">제안</span></h3>
         <div class="kv"><span>보유 종목·현금</span><span>실제 자산 기준 학습·검증</span></div>
         <div class="kv"><span>나의 거래 내역</span><span>본인 매매 기록 기반 학습</span></div>
         <div class="kv"><span>자동 주문</span><span>주문 한도, 주문 전 승인</span></div>
@@ -432,7 +439,7 @@
     const ver = S.versions.find(v => v.run.run_id === r.run_id);
     const chart = lineChart(s.dates, [
       { name: '나의 AI 가상 운용', short: '나의 AI', color: 'var(--s1)', values: s.strategy, main: true },
-      { name: '코스피 대용(시가총액 가중 산출)', short: '코스피 대용', color: 'var(--s2)', values: s.market },
+      { name: '코스피 지수', short: '코스피', color: 'var(--s2)', values: s.market },
       { name: '대상 300종목 동일가중', short: '300종목', color: 'var(--s3)', dash: '3 3', values: s.universe }],
       { fmt: v => Math.round(v / 1e4).toLocaleString() + '만', split: CAT.periods.locked_final[0], base: r.init || r.s.cash, log: true, label: '가상 평가금액 추이(로그 축)' });
     const roll = r.rolling_6m, imp = r.model.importance_last_fold.slice(0, qs ? 20 : 5), mx = imp[0].share;
@@ -446,7 +453,7 @@
     const tol = xval(r.s, 'tol') / 100, yrs0 = (r.yearly || []).filter(y => y.year >= P.a && y.year <= P.b), worst = yrs0.length ? yrs0.reduce((m, y) => y.ret < m.ret ? y : m) : null, tolBad = !!(tol && worst && worst.ret < -tol);
     const fit = d.cagr > mkc && d.cagr > 0 && !tolBad, gap = (d.cagr - mkc) * 100;
     const idxNote = `<div class="fit ${fit ? 'ok' : 'no'}"><b>${fit ? '모의 운용 대상' : '실전 운용 부적합'}</b>
-      <span>${d.cagr <= 0 ? '비용 반영 시 원금 손실' : d.cagr <= mkc ? '지수 미달' : tolBad ? '손실 허용 한도 초과' : '비용 반영 수익, 지수 상회'} · 코스피 대용 대비 ${gap > 0 ? '+' : ''}${gap.toFixed(1)}%p</span>
+      <span>${d.cagr <= 0 ? '비용 반영 시 원금 손실' : d.cagr <= mkc ? '지수 미달' : tolBad ? '손실 허용 한도 초과' : '비용 반영 수익, 지수 상회'} · 코스피 지수 대비 ${gap > 0 ? '+' : ''}${gap.toFixed(1)}%p</span>
       ${tol ? `<span>연간 손실 허용 한도 ${(tol * 100).toFixed(0)}% · 최저 연도 ${worst.year}년 ${pct(worst.ret)} · ${tolBad ? '한도 초과' : '한도 이내'}</span>` : ''}
       <span class="muted">${fit ? '실주문 연계 전 모의 운용 기간 필요. 과거 성과의 이후 지속 미보장' : '해당 설정은 주문 연계 미지원. AI 개선에서 후보 비교 가능'}</span></div>`;
     const cr = r.costs;
@@ -456,11 +463,11 @@
         <tr class="bestrow"><td>기본 가정</td><td class="${cls(d0.cagr)}">${pct(d0.cagr)}</td><td>${pct(d0.mdd)}</td></tr>
         <tr><td>슬리피지 3배</td><td class="${cls(cr.high_slippage[0])}">${pct(cr.high_slippage[0])}</td><td>${pct(cr.high_slippage[1])}</td></tr></table></div>
         <p class="muted">기본 가정: 수수료 0.015%, 매도 시 거래세 0.20%, 슬리피지 편도 0.10%. 슬리피지 3배: 편도 0.30%</p></div>` : '';
-    const cp = r.composition, ov = r.overlay || {}, kv = (a, b) => `<div class="kv"><span>${a}</span><span>${b}</span></div>`;
-    const compCard = cp ? `<div class="card"><h3>상품 구성별 결과</h3><p class="sub">${r.series.dates[r.series.dates.length - 1]} 평가금액 기준</p>
-        ${[['stock', '국내주식(AI 선정)'], ['holdings', '보유 종목'], ['cash', '현금성 자산'], ['lev', '레버리지(2배) 상품'], ['inv', '인버스 상품'], ['overlay', '선물·옵션 누적 손익']].filter(([k]) => cp[k]).map(([k, l]) => kv(l, won(cp[k]))).join('')}
-        ${ov.hedge_cost ? kv('선물 헤지 비용 합계', won(ov.hedge_cost)) : ''}${ov.option_premium ? kv('옵션 프리미엄 수지', won(ov.option_premium)) + kv('옵션 만기 정산 합계', won(ov.option_payoff)) : ''}
-        <p class="muted">코스피 대용 지수 기준 가정 계산. 금리 연 3%, 상품 보수 연 0.5%, 선물 헤지 비용 연 0.3%, 옵션 내재변동성은 60일 실현변동성의 1.2배, 풋 행사가 95%·콜 행사가 105%, 만기 20거래일. 실제 선물·옵션 시세와 증거금 미반영</p></div>` : '';
+    const cp = r.composition;
+    const compCard = cp ? `<div class="card"><h3>상품 구성별 결과</h3><p class="sub">전 기간(${r.series.dates[0]}~${r.series.dates[r.series.dates.length - 1]}) 실제 시세 기준</p>
+        <div class="scroll"><table><tr><th>상품</th><th>투입 금액</th><th>기말 평가·손익</th></tr>
+        ${cp.map(x => `<tr><td>${esc(x.label)}</td><td>${x.start ? won(x.start) : '–'}</td><td class="${cls(x.start ? x.end - x.start : x.end)}">${won(x.end)}${x.start ? ` (${pct(x.end / x.start - 1)})` : ''}</td></tr>`).join('')}</table></div>
+        ${(r.notes || []).length ? `<p class="muted">${r.notes.map(esc).join('. ')}. ETF 분배금 미반영</p>` : '<p class="muted">ETF 분배금 미반영</p>'}</div>` : '';
     const led = qs ? r.ledger_tail : r.ledger_tail.filter(l => l.side !== '매수불가');
     const askCard = `<div class="card" data-keep="1"><h3>AI 개선</h3>${['reduce_loss', 'less_trading', 'more_data'].map(k => `<button class="rowbtn" data-act="opt" data-v="${k}"><span>${CAT.improvements[k].label}</span><i>›</i></button>`).join('')}</div>`;
     const stratCard = `<div class="card span strat" data-keep="1"><h3>나의 AI 제시 전략</h3><div class="sg">
@@ -478,14 +485,14 @@
         <div class="tiles">
           <div class="tile"><div class="k">최대 낙폭</div><div class="v down">${pct(d.mdd)}</div><div class="n">${d.mdd_peak.slice(2, 7).replace('-', '.')}~${d.mdd_trough.slice(2, 7).replace('-', '.')}${d.custom ? '' : d.mdd_recovered ? ' · 회복 ' + d.mdd_recovered.slice(2, 7).replace('-', '.') : ' · 미회복'}</div></div>
           <div class="tile"><div class="k">거래 횟수</div><div class="v">연 ${Math.round(d.trades_per_year)}회</div><div class="n">수수료·세금 ${won(d.explicit_cost_krw)}</div></div>
-          <div class="tile"><div class="k">동일 기간 코스피 대용</div><div class="v ${cls(mkc)}">연 ${pct(mkc)}</div><div class="n">비용·배당 미반영</div></div>
+          <div class="tile"><div class="k">동일 기간 코스피 지수</div><div class="v ${cls(mkc)}">연 ${pct(mkc)}</div><div class="n">배당 미반영</div></div>
           <div class="tile"><div class="k">투자금 부족 매수 불가</div><div class="v">${sk.unaffordable}건</div><div class="n">전체 기간 · 거래정지·상한가 ${sk.untradable_buy}건</div></div>
         </div></div>
       ${askCard}${compCard}${costCard}
       <div class="card"><h3>최종 평가 구간(${f.from}~${f.to})</h3>
         <p class="sub">후보 선정 미사용 기간</p>
         <div class="kv"><span>모델</span><span class="${cls(f.total_return)}">${pct(f.total_return)} (낙폭 ${pct(f.mdd)})</span></div>
-        <div class="kv"><span>코스피 대용</span><span class="${cls(r.benchmarks.market.final.total_return)}">${pct(r.benchmarks.market.final.total_return)} (낙폭 ${pct(r.benchmarks.market.final.mdd)})</span></div>
+        <div class="kv"><span>코스피 지수</span><span class="${cls(r.benchmarks.market.final.total_return)}">${pct(r.benchmarks.market.final.total_return)} (낙폭 ${pct(r.benchmarks.market.final.mdd)})</span></div>
         <div class="kv"><span>대상 300종목 동일가중</span><span class="${cls(r.benchmarks.universe.final.total_return)}">${pct(r.benchmarks.universe.final.total_return)}</span></div></div>
       ${roll.n_windows ? `<div class="card"><h3>투자 시작 시점별 6개월 수익률</h3>
         <div class="kv"><span>하위 10%</span><span class="${cls(roll.p10)}">${pct(roll.p10)}</span></div>
@@ -497,9 +504,9 @@
         ${imp.map(i => `<div class="imp"><div class="kv" style="border:0;padding:0"><span>${esc(i.label)}</span><span>${(i.share * 100).toFixed(1)}%</span></div><div class="bar"><span style="width:${i.share / mx * 100}%"></span></div></div>`).join('')}
         <p class="muted">${esc(r.model.importance_kind)} · 최종 학습 기준. 인과관계 해석 불가</p></div>
       ${qs ? `<div class="card"><h3>상세 지표</h3><div class="scroll"><table><tr><th>검증 구간</th><th>연 수익률</th><th>최대 낙폭</th><th>샤프 지수</th><th>연 거래</th></tr>
-          ${benchRow('전략(비용 반영)', d)}${benchRow('코스피 대용', r.benchmarks.market.dev)}${benchRow('300종목 동일가중', r.benchmarks.universe.dev)}
+          ${benchRow('전략(비용 반영)', d)}${benchRow('코스피 지수', r.benchmarks.market.dev)}${benchRow('300종목 동일가중', r.benchmarks.universe.dev)}
           <tr><th>최종 평가 구간</th><th></th><th></th><th></th><th></th></tr>
-          ${benchRow('전략(비용 반영)', f)}${benchRow('코스피 대용', r.benchmarks.market.final)}${benchRow('300종목 동일가중', r.benchmarks.universe.final)}</table></div>
+          ${benchRow('전략(비용 반영)', f)}${benchRow('코스피 지수', r.benchmarks.market.final)}${benchRow('300종목 동일가중', r.benchmarks.universe.final)}</table></div>
         <div class="kv"><span>순위 상관계수(Rank IC), 검증 / 최종</span><span>${r.model.ic.dev.rank_ic_mean} / ${r.model.ic.final.rank_ic_mean}</span></div>
         <div class="kv"><span>순위 상관계수 양수 비율(검증)</span><span>${(r.model.ic.dev.rank_ic_positive_share * 100).toFixed(0)}% · ${r.model.ic.dev.n_dates}일</span></div>
         <div class="kv"><span>승률(청산 거래)</span><span>${r.ledger_summary.win_rate != null ? (r.ledger_summary.win_rate * 100).toFixed(1) + '%' : '–'}</span></div>
@@ -607,7 +614,7 @@
       <div class="kv"><span>최적화 기준</span><span>${PRESET[s.preset || 'balanced']}</span></div>
       ${nPlan(s) ? `<div class="kv"><span>설계안 항목</span><span>${nPlan(s)}개</span></div>` : ''}
       ${action}<p class="muted">공유 제외: 수익률, 종목, 개인 자산 정보. 수신자는 본인 조건으로 재학습</p></div>`;
-  const shareUrl = () => location.origin + location.pathname + '#r=' + btoa(unescape(encodeURIComponent(JSON.stringify({ m: S.mode, s: { ...(S.cur ? S.cur.s : S.spec), holdings: [] } }))));
+  const shareUrl = () => location.origin + location.pathname + '#r=' + btoa(unescape(encodeURIComponent(JSON.stringify({ m: S.mode, s: { ...(S.cur ? S.cur.s : S.spec), holdings: [], usst: [] } }))));
 
   function render() {
     chartSeq = 0;
@@ -644,7 +651,7 @@
   }
   async function runCurrent() {
     const s = cl(S.spec);
-    if (S.cur && LM() && sameSpec(s, S.cur.s)) { const ch = s.preset !== S.cur.s.preset, xc = JSON.stringify([s.x, s.xv, s.rules]) !== JSON.stringify([S.cur.s.x, S.cur.s.xv, S.cur.s.rules]); S.cur.s.preset = s.preset; S.cur.s.x = [...s.x]; S.cur.s.xv = { ...s.xv }; S.cur.s.rules = [...s.rules]; S.tab = 'validate'; render(); window.scrollTo(0, 0); return toast(xc ? '설계안 항목 기록(계산 미반영)' : ch ? '우선 목표 변경 반영' : '변경 사항 없음'); }
+    if (S.cur && LM() && sameSpec(s, S.cur.s)) { const ch = s.preset !== S.cur.s.preset, xc = JSON.stringify([s.x, s.xv, s.rules]) !== JSON.stringify([S.cur.s.x, S.cur.s.xv, S.cur.s.rules]); S.cur.s.preset = s.preset; S.cur.s.x = [...s.x]; S.cur.s.xv = { ...s.xv }; S.cur.s.rules = [...s.rules]; S.tab = 'validate'; render(); window.scrollTo(0, 0); return toast(ch ? '우선 목표 변경 반영' : '변경 사항 없음'); }
     const prev = S.cur ? S.versions : null; let fb = false;
     const r = await withBusy('학습 중', async log => {
       log('[자료] 학습 자료 수신'); await labLoad();
@@ -661,10 +668,11 @@
     S.tab = 'validate'; render(); window.scrollTo(0, 0);
   }
   const EXTRA = {
-    reduce_loss: [{ change: '종목별 손절 기준 10% 적용', kind: 'strategy', patch: { x: { stop: 10 } } }, { change: '현금성 자산 30% 편입', kind: 'strategy', patch: { x: { p_rp: 30 } } },
-      { change: '하락장 한정 지수 선물 헤지 50%', kind: 'strategy', dv: 1, patch: { x: { p_futd: 50 } } }, { change: '보호적 풋옵션 매수', kind: 'strategy', dv: 1, patch: { x: { p_put: 100 } } }],
+    reduce_loss: [{ change: '종목별 손절 기준 10% 적용', kind: 'strategy', patch: { x: { stop: 10 } } }, { change: 'KODEX 단기채권 30% 편입', kind: 'strategy', patch: { x: { p_rp: 30 } } }, { change: 'KIWOOM 국고채10년 30% 편입', kind: 'strategy', patch: { x: { p_bond10: 30 } } },
+      { change: '하락장 한정 코스피200 선물 헤지 50%', kind: 'strategy', dv: 1, patch: { x: { p_futd: 50 } } }, { change: '코스피200 풋옵션 매수', kind: 'strategy', dv: 1, patch: { x: { p_put: 100 } } }],
     less_trading: [{ change: '예측·보유 기간 60거래일', kind: 'model', patch: { model_spec: { horizon_days: 60 } } }],
-    more_data: [{ change: '장기 추세 변수 추가', kind: 'model', patch: { model_spec: { add_groups: ['trend'] } } }, { change: '전체 변수 반영', kind: 'model', patch: { model_spec: { add_groups: ['volume', 'risk', 'size', 'trend', 'pattern', 'beta', 'age'] } } }],
+    more_data: [{ change: '투자자별 수급 변수 추가', kind: 'model', patch: { model_spec: { add_groups: ['flow'] } } }, { change: '업종·테마 변수 추가', kind: 'model', patch: { model_spec: { add_groups: ['sector'] } } },
+      { change: '전체 변수 반영', kind: 'model', patch: { model_spec: { add_groups: ['volume', 'risk', 'size', 'trend', 'pattern', 'beta', 'age', 'flow', 'sector', 'disc'] } } }],
   };
   async function runOpt(req) {
     const imp = CAT.improvements[req], baseS = S.cur.s;
@@ -690,7 +698,7 @@
     if (out) { S.opt = out; render(); }
   }
   function parseText(t) {
-    const s = S.spec, notes = [], no = [], xs = [], M = LM();
+    const s = S.spec, notes = [], no = [], M = LM();
     const add = g => { if (!s.groups.includes(g)) s.groups.push(g); };
     const num = re => { const m = t.match(re); return m ? +m[1] : null; };
     const dvOk = () => { if (xon(s, 'exp1')) { no.push('투자 경험 1년 미만은 파생상품·레버리지 상품 선택 제한'); return false; } return true; };
@@ -698,11 +706,12 @@
     const bel = i => { Object.assign(s.belief = s.belief || {}, BEL[i][1]); BEL[i][2].forEach(add); notes.push(BEL[i][0]); };
     if (/손절/.test(t)) lx('stop', num(/손절[^0-9]{0,8}(\d+(?:\.\d+)?) ?%/) || num(/(\d+(?:\.\d+)?) ?%[^,.]{0,10}손절/));
     if (/익절|이익 ?실현/.test(t)) lx('take', num(/(?:익절|이익 ?실현)[^0-9]{0,8}(\d+(?:\.\d+)?) ?%/) || num(/(\d+(?:\.\d+)?) ?%[^,.]{0,10}(?:익절|이익 ?실현)/));
-    if (/현금|RP|발행어음|예수금/i.test(t) && /비중|편입|보유|%/.test(t)) lx('p_rp', num(/(?:현금|RP|발행어음)[^0-9]{0,10}(\d+) ?%/i));
+    if (/현금|단기채|예수금/.test(t) && /비중|편입|보유|%/.test(t)) lx('p_rp', num(/(?:현금|단기채)[^0-9]{0,10}(\d+) ?%/));
     if (/선물/.test(t) && dvOk()) lx(/하락장|하락 ?시|떨어질/.test(t) ? 'p_futd' : 'p_fut', num(/선물[^0-9]{0,12}(\d+) ?%/));
     else if (/헤지|헷지/.test(t) && !/옵션|풋/.test(t) && dvOk()) lx('p_futd', null);
     if (/풋|옵션.*(대비|방어|보호|헤지|헷지)|(대비|방어|보호).*옵션/.test(t) && dvOk()) lx('p_put', null);
-    if (/커버드 ?콜|콜 ?매도|콜옵션/.test(t) && dvOk()) lx('p_call', null);
+    if (/커버드 ?콜/.test(t) && dvOk()) lx('p_cc', num(/커버드 ?콜[^0-9]{0,10}(\d+) ?%/));
+    else if (/콜 ?매도|콜옵션/.test(t) && dvOk()) lx('p_call', null);
     if (/레버리지/.test(t) && dvOk()) lx('p_lev', num(/레버리지[^0-9]{0,10}(\d+) ?%/));
     if (/인버스/.test(t) && dvOk()) lx('p_inv', num(/인버스[^0-9]{0,10}(\d+) ?%/));
     if (/신규 ?상장|공모주|새내기/.test(t) && /제외|빼|피하|싫/.test(t)) lx('nonew');
@@ -732,12 +741,25 @@
       if (i < 0) { const c1 = M.names.map((n, j) => [n, j]).filter(([n]) => n.includes(w)), c2 = c1.filter(([n]) => n.endsWith(w) || n.startsWith(w)); i = c1.length === 1 ? c1[0][1] : c2.length === 1 ? c2[0][1] : -1; }
       if (i >= 0) { if (!(s.excl = s.excl || []).includes(M.codes[i])) s.excl.push(M.codes[i]); notes.push(M.names[i] + ' 제외'); }
     }));
-    const ax = (re, id) => { if (re.test(t) && XI[id]) { if (!s.x.includes(id)) s.x.push(id); xs.push(XI[id].l); } };
-    ax(/외국인/, 'frg'); ax(/기관/, 'inst'); ax(/실적|재무|PER|PBR/i, 'fin'); ax(/배당/, 'div'); ax(/보고서|애널|리포트|목표가/, 'rep'); ax(/공시/, 'dart');
-    ax(/뉴스|기사/, 'newsT'); ax(/토론방|게시글|커뮤니티/, 'board'); ax(/테마/, 'theme'); ax(/업종|섹터|반도체|바이오|2차전지/, 'sector'); ax(/미국|나스닥|해외/, 'us'); ax(/환율/, 'fx'); ax(/ETF|상장지수/i, 'p_etf'); ax(/채권/, 'p_bond');
+    if (/외국인|외인/.test(t)) bel(5);
+    if (/기관/.test(t)) bel(6);
+    if (/업종|섹터|테마/.test(t) && /강세|주도|오르는|좋은|선호/.test(t)) bel(7);
+    if (/수급/.test(t)) { add('flow'); notes.push('투자자별 수급 정보 추가'); }
+    if (/공시/.test(t)) { add('disc'); notes.push('공시 정보 추가'); }
+    if (/시장경보|투자주의|투자경고|관리종목/.test(t)) lx('noalert');
+    if (/나스닥|미국 ?(증시|시장|장)/.test(t) && /하락|빠지|떨어|급락/.test(t)) lx('nas', num(/(\d+(?:\.\d+)?) ?%/));
+    else if (/나스닥/.test(t)) lx('p_nas', num(/나스닥[^0-9]{0,10}(\d+) ?%/));
+    if (/S&P|에스앤피|미국 ?주식/i.test(t)) lx('p_us', num(/(?:S&P ?500|에스앤피|미국 ?주식)[^0-9]{0,10}(\d+) ?%/i));
+    if (/VIX|공포 ?지수/i.test(t)) lx('vix', num(/(?:VIX|공포 ?지수)[^0-9]{0,8}(\d+)/i));
+    if (/환율/.test(t) && /오르|상승|급등/.test(t)) lx('fx', num(/환율[^0-9]{0,12}(\d+(?:\.\d+)?) ?%/));
+    if (/달러/.test(t) && /비중|편입|보유|%/.test(t)) lx('p_usd', num(/달러[^0-9]{0,10}(\d+) ?%/));
+    if (/금 ?(투자|현물|선물|비중)|골드/.test(t)) lx('p_gold', num(/(?:금|골드)[^0-9]{0,10}(\d+) ?%/));
+    if (/국고채|국채|채권/.test(t)) lx(/3년|단기/.test(t) ? 'p_bond' : 'p_bond10', num(/(?:국고채|국채|채권)[^0-9]{0,10}(\d+) ?%/));
+    if (/업종.*(분산|쏠림|편중)|한 업종/.test(t)) lx('scap', num(/(\d+) ?%/));
+    if (/실적|재무|PER|PBR|배당|애널|리포트|목표가|뉴스|기사|공매도/i.test(t)) no.push('실적·배당·보고서·뉴스·공매도 자료 미연결');
     if (/추천|뭐 ?사|사야|사도|살까|팔까|팔아|매수해|매도해|오를|될까/.test(t)) no.push('종목 추천·매수 권유 미제공(과거 데이터 연구로 한정)');
     if (!s.rules.includes(t.trim())) s.rules = [...s.rules, t.trim()].slice(-20);
-    return (notes.length ? '<b>계산 반영:</b> ' + [...new Set(notes)].map(esc).join(', ') : '계산 반영 조건 없음') + (xs.length ? '<br><b>설계안 항목 선택(자료 미확보):</b> ' + xs.join(', ') : '') + '<br><b>규칙 기록:</b> 1건' + (no.length ? '<br><b>미지원:</b> ' + no.join(' / ') : '') + '<br><span class="muted">규칙 기반 해석. 재학습 시 결과 반영</span>';
+    return (notes.length ? '<b>계산 반영:</b> ' + [...new Set(notes)].map(esc).join(', ') : '계산 반영 조건 없음') + '<br><b>규칙 기록:</b> 1건' + (no.length ? '<br><b>미지원:</b> ' + no.join(' / ') : '') + '<br><span class="muted">규칙 기반 해석. 재학습 시 결과 반영</span>';
   }
   async function parseNl() {
     const t = ($('#nl') || {}).value || ''; if (!t.trim()) return toast('입력 내용 없음');
@@ -786,7 +808,12 @@
       if (v === 'holdings') { const amt = Math.max(1, +$('#stka_holdings').value || 0) * 1e4; s.holdings = [...(s.holdings || []).filter(h => h.code !== code), { code, amt }].slice(-10); }
       else { s[v] = [...new Set([...(s[v] || []), code])].slice(-30); if (v === 'only') s.uni = 'watch'; }
     }
-    else if (a === 'stkdel') { const k = b.dataset.k; s[k] = (s[k] || []).filter((_, i) => i !== +v); if (k === 'only' && !s.only.length && s.uni === 'watch') s.uni = 'all'; }
+    else if (a === 'pkadd') {
+      const val = $('#pk_' + v).value; if (!val) return;
+      if (v === 'usst') { const pc = Math.max(1, Math.min(100, +$('#pka_usst').value || 10)); s.usst = [...(s.usst || []).filter(x => x.id !== val), { id: val, pct: pc }].slice(-10); }
+      else { s.inds = [...new Set([...(s.inds || []), val])].slice(-20); s.uni = 'sector'; }
+    }
+    else if (a === 'stkdel') { const k = b.dataset.k; s[k] = (s[k] || []).filter((_, i) => i !== +v); if (k === 'only' && !s.only.length && s.uni === 'watch') s.uni = 'all'; if (k === 'inds' && !s.inds.length && s.uni === 'sector') s.uni = 'all'; }
     else if (a === 'xclr') { s.x = (s.x || []).filter(o => XI[o].rg !== v); }
     else if (a === 'rdel') { s.rules = s.rules.filter((_, i) => i !== +v); }
     else if (a === 'tog') { if (b.dataset.k === 'vf') s.vf = s.vf > 0 ? 0 : 0.3; else s.mf = !s.mf; }

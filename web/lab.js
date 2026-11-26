@@ -1,14 +1,13 @@
 /* 브라우저 내 학습·가상 운용 엔진.
    - 선형 모델: 연도별 충분통계량(X'X, X'y)으로 임의의 변수 조합을 연 단위 전진 분석으로 학습(전체 표본 학습과 동일한 해).
    - 가상 운용: 일별 수정주가 수익률로 정수 주식 수, 현금, 거래 비용, 거래 불가를 반영하여 재계산.
-   - 지수 선물·옵션·레버리지 상품은 코스피 대용 지수와 이론가 기준 가정 계산. */
+   - 상품 편입은 실제 ETF·미국 주식 일별 시세, 헤지는 코스피200 선물·옵션 실제 종가로 계산. 가정값·이론가 미사용. */
 (function (root) {
   'use strict';
-  const NA16 = -32768, VERSION = 'lab-1.0';
+  const NA16 = -32768, VERSION = 'lab-2.0';
   let M = null; const A = {}; const lgbCache = {};
   const COST = { kr_default: { fee: 0.00015, tax: 0.0020, slip: 0.0010, label: '수수료 0.015%(매수·매도), 매도 시 거래세 0.20%, 슬리피지 편도 0.10% 가정' },
     zero_cost: { fee: 0, tax: 0, slip: 0, label: '비용 없음' }, high_slippage: { fee: 0.00015, tax: 0.0020, slip: 0.0030, label: '슬리피지 편도 0.30% 가정' } };
-  const ASSUME = { rf: 0.03, etfFee: 0.005, hedgeCost: 0.003, ivMul: 1.2, putK: 0.95, callK: 1.05, optDays: 20 };
   const TYPES = { int8: Int8Array, uint8: Uint8Array, int16: Int16Array, uint16: Uint16Array, float32: Float32Array, float64: Float64Array };
 
   async function gunzip(url, readFile) {
@@ -128,6 +127,7 @@
   function backtest(score, pol, cash0) {
     const nd = M.nd, nc = M.nc, cm = COST[pol.cost || 'kr_default'], k = pol.k, hold = pol.h, lr = A.lr, lo = A.lo;
     const logC = new Float64Array(nc), eq = new Float64Array(nd), ledger = [], skipped = { untradable_buy: 0, unaffordable: 0, untradable_sell: 0, market_filter: 0, stop: 0, take: 0, day_limit: 0, floor: 0 };
+    const inds = pol.inds && pol.inds.length ? new Set(pol.inds) : null, maxPer = pol.scap ? Math.max(1, Math.round(pol.scap * pol.k)) : 0;
     const pos = new Map(), pending = new Set(); let cash = cash0, orders = null, urgent = false, fees = 0, turnover = 0, halted = false, prevEq = cash0;
     const excl = new Set(pol.excl || []), only = pol.only && pol.only.length ? new Set(pol.only) : null, closeExec = pol.ex === 'close';
     const name = c => M.names[c];
@@ -173,15 +173,20 @@
         if (pol.uni === 'kospi') cand = cand.filter(x => A.kospi[x.c]);
         if (pol.uni === 'top100' || pol.uni === 'top200') { const n = pol.uni === 'top100' ? 100 : 200, th = cand.map(x => at(A.Marcap, x)).sort((a, b) => b - a)[Math.min(n, cand.length) - 1]; cand = cand.filter(x => at(A.Marcap, x) >= th); }
         if (pol.nonew) cand = cand.filter(x => at(A.listed_days, x) >= 250);
+        if (pol.noalert) cand = cand.filter(x => !(at(A.alert_20, x) > 0));
+        if (inds) cand = cand.filter(x => inds.has(A.ind[x.c]));
         if (excl.size) cand = cand.filter(x => !excl.has(x.c));
         if (only) cand = cand.filter(x => only.has(x.c));
         if (pol.vf > 0) { const v = cand.map(x => at(A.vol_60, x)).filter(x => !Number.isNaN(x)).sort((a, b) => a - b), q = quantile(v, 1 - pol.vf); cand = cand.filter(x => at(A.vol_60, x) <= q); }
         const rk = rankArr(cand.map(x => -x.sc)); cand.forEach((x, i) => { x.rank = rk[i]; });
         const byC = new Map(cand.map(x => [x.c, x]));
         const keep = new Set(); if (pol.buf > 1) for (const c of pos.keys()) { const x = byC.get(c); if (x && x.rank <= k * pol.buf && !pending.has(c)) keep.add(c); }
-        const riskOff = pol.mf && A.below[d];
+        const riskOff = (pol.mf && A.below[d]) || (pol.nasStop && A.nas[d] <= -pol.nasStop) || (pol.vixStop && A.vix[d] >= pol.vixStop) || (pol.fxStop && A.fx20[d] >= pol.fxStop);
         let nw = [];
-        if (riskOff) skipped.market_filter++; else nw = cand.filter(x => !keep.has(x.c)).sort((a, b) => b.sc - a.sc).slice(0, Math.max(0, k - keep.size));
+        if (riskOff) skipped.market_filter++;
+        else if (!maxPer) nw = cand.filter(x => !keep.has(x.c)).sort((a, b) => b.sc - a.sc).slice(0, Math.max(0, k - keep.size));
+        else { const cnt = new Map(); for (const c of keep) { const g = A.ind[c]; if (g >= 0) cnt.set(g, (cnt.get(g) || 0) + 1); }
+          for (const x of cand.filter(x => !keep.has(x.c)).sort((a, b) => b.sc - a.sc)) { if (nw.length >= k - keep.size) break; const g = A.ind[x.c]; if (g >= 0 && (cnt.get(g) || 0) >= maxPer) continue; if (g >= 0) cnt.set(g, (cnt.get(g) || 0) + 1); nw.push(x); } }
         const nwSet = new Set(nw.map(x => x.c));
         const sell = [...pos.keys()].filter(c => !keep.has(c) && !nwSet.has(c));
         let buy = nw.filter(x => !pos.has(x.c));
@@ -196,31 +201,28 @@
       open: [...pos].map(([c, p]) => ({ code: M.codes[c], name: name(c), shares: p.shares, since: p.entryDate })), cost_label: cm.label };
   }
 
-  /* ---------- 상품 구성(지수 대용·이론가 기준 가정) ---------- */
-  const ncdf = x => { const t = 1 / (1 + 0.2316419 * Math.abs(x)), d = 0.3989423 * Math.exp(-x * x / 2), p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))); return x > 0 ? 1 - p : p; };
-  function bs(K, T, sig, r, put) { const d1 = (Math.log(1 / K) + (r + sig * sig / 2) * T) / (sig * Math.sqrt(T)), d2 = d1 - sig * Math.sqrt(T); return put ? K * Math.exp(-r * T) * ncdf(-d2) - ncdf(-d1) : ncdf(d1) - K * Math.exp(-r * T) * ncdf(d2); }
-  function compose(stockEq, p, cashTotal) {
-    const nd = M.nd, m = A.mkt, tot = new Float64Array(nd), parts = { stock: stockEq, cash: null, lev: null, inv: null, overlay: null, holdings: null }, notes = [];
-    const cashAmt = cashTotal * (p.cashPct || 0), levAmt = cashTotal * (p.levPct || 0), invAmt = cashTotal * (p.invPct || 0);
-    const cs = new Float64Array(nd), lv = new Float64Array(nd), iv = new Float64Array(nd), ov = new Float64Array(nd), hd = new Float64Array(nd);
-    let a = cashAmt, b = levAmt, c = invAmt;
-    for (let d = 0; d < nd; d++) { if (d) { a *= 1 + ASSUME.rf / 252; b *= 1 + 2 * m[d] - ASSUME.etfFee / 252; c *= 1 - m[d] - ASSUME.etfFee / 252; } cs[d] = a; lv[d] = Math.max(b, 0); iv[d] = Math.max(c, 0); }
-    if (p.holdings && p.holdings.length) { const lc = new Float64Array(M.nc); for (let d = 0; d < nd; d++) { let v = 0; for (const h of p.holdings) { if (d) lc[h.c] += A.lr[d * M.nc + h.c] / 1e4; v += h.amt * Math.exp(lc[h.c]); } hd[d] = v; } notes.push('보유 종목은 검증 기간 동안 계속 보유했다고 가정'); }
-    let cum = 0, lvl = 1; const opt = []; let hedgeCost = 0, optPrem = 0, optPay = 0;
+  /* ---------- 상품 구성(실제 시세) ---------- */
+  function compose(stockEq, p) {
+    const nd = M.nd, nP = M.products.length, tot = new Float64Array(nd), cm = COST.kr_default, parts = [], notes = [];
+    const add = new Float64Array(nd);
+    for (const q of p.prods || []) { const v = new Float64Array(nd); let x = q.amt * (1 - cm.fee - cm.slip); for (let d = 0; d < nd; d++) { if (d) x *= Math.exp(A.prod[d * nP + q.i] / 1e4); v[d] = x; add[d] += x; } parts.push({ label: M.products[q.i].name, cat: M.products[q.i].cat, start: q.amt, end: x }); }
+    const hd = new Float64Array(nd);
+    if (p.holdings && p.holdings.length) { const lc = new Float64Array(M.nc); for (let d = 0; d < nd; d++) { let v = 0; for (const h of p.holdings) { if (d) lc[h.c] += A.lr[d * M.nc + h.c] / 1e4; v += h.amt * Math.exp(lc[h.c]); } hd[d] = v; }
+      parts.push({ label: '보유 종목', cat: '국내주식', start: p.holdings.reduce((a, h) => a + h.amt, 0), end: hd[nd - 1] }); notes.push('보유 종목은 검증 기간 계속 보유 기준'); }
+    let hedge = 0, put = 0, call = 0, nPut = 0, nCall = 0, hedgeDays = 0;
     for (let d = 0; d < nd; d++) {
-      const base = (d ? stockEq[d - 1] + hd[d - 1] + lv[d - 1] : 0);
-      if (d && p.hedge && (p.hedgeCond !== 'down' || A.below[d - 1])) { const n = p.hedge * base; cum += -n * m[d] - n * ASSUME.hedgeCost / 252; hedgeCost += n * ASSUME.hedgeCost / 252; }
-      if (d) lvl *= 1 + m[d];
-      for (let i = opt.length - 1; i >= 0; i--) if (opt[i].exp === d) { const o = opt[i], r = lvl / o.s0; const pay = o.put ? Math.max(o.K - r, 0) * o.n : -Math.max(r - o.K, 0) * o.n; cum += pay; optPay += pay; opt.splice(i, 1); }
-      if ((p.put || p.call) && d % ASSUME.optDays === 0 && d + ASSUME.optDays < nd) {
-        const n0 = stockEq[d] + hd[d] + lv[d], T = ASSUME.optDays / 252, sig = Math.max(A.mvol[d], 0.08) * ASSUME.ivMul;
-        if (p.put) { const n = p.put * n0, pr = bs(ASSUME.putK, T, sig, ASSUME.rf, true) * n; cum -= pr; optPrem -= pr; opt.push({ exp: d + ASSUME.optDays, s0: lvl, K: ASSUME.putK, n, put: true }); }
-        if (p.call) { const n = p.call * n0, pr = bs(ASSUME.callK, T, sig, ASSUME.rf, false) * n; cum += pr; optPrem += pr; opt.push({ exp: d + ASSUME.optDays, s0: lvl, K: ASSUME.callK, n, put: false }); }
-      }
-      ov[d] = cum; tot[d] = stockEq[d] + cs[d] + lv[d] + iv[d] + hd[d] + cum;
+      const base = d ? stockEq[d - 1] + hd[d - 1] : 0, f = A.fut[d];
+      if (d && p.hedge && !Number.isNaN(f) && (p.hedgeCond !== 'down' || A.below[d - 1])) { hedge += -p.hedge * base * f; hedgeDays++; }
+      if (p.put) { const r = A.put[d]; if (!Number.isNaN(r)) put += nPut * r; if (A.put_roll[d]) nPut = p.put * (stockEq[d] + hd[d]); }
+      if (p.call) { const r = A.call[d]; if (!Number.isNaN(r)) call -= nCall * r; if (A.call_roll[d]) nCall = p.call * (stockEq[d] + hd[d]); }
+      tot[d] = stockEq[d] + add[d] + hd[d] + hedge + put + call;
     }
-    parts.cash = cs; parts.lev = lv; parts.inv = iv; parts.overlay = ov; parts.holdings = hd;
-    return { tot, parts, notes, overlay: { hedge_cost: hedgeCost, option_premium: optPrem, option_payoff: optPay, total: cum } };
+    const dv = M.derivs;
+    if (p.hedge) { parts.push({ label: '코스피200 선물 매도 헤지 누적 손익', cat: '파생상품', start: 0, end: hedge }); notes.push(`선물 헤지는 실제 근월물 종가 기준, 자료 기간 ${dv.fut.first} 이후 적용(${hedgeDays}거래일)`); }
+    if (p.put) { parts.push({ label: '코스피200 풋옵션 매수 누적 손익', cat: '파생상품', start: 0, end: put }); notes.push(`풋옵션은 행사가 95% 부근 월물 실제 종가 기준, 자료 기간 ${dv.put.first} 이후 ${dv.put.n_trades}회 매수`); }
+    if (p.call) { parts.push({ label: '코스피200 콜옵션 매도 누적 손익', cat: '파생상품', start: 0, end: call }); notes.push(`콜옵션은 행사가 105% 부근 월물 실제 종가 기준, 자료 기간 ${dv.call.first} 이후 ${dv.call.n_trades}회 매도`); }
+    if (p.hedge || p.put || p.call) notes.push('선물·옵션은 계약 단위, 증거금, 수수료 미반영');
+    return { tot, parts, notes };
   }
 
   /* ---------- 지표 ---------- */
@@ -259,26 +261,28 @@
   async function run(spec) {
     const t0 = Date.now(), ms = spec.model, pol = spec.policy, pf = spec.portfolio || {};
     const mdl = await train(ms);
-    const alloc = (pf.cashPct || 0) + (pf.levPct || 0) + (pf.invPct || 0), stockCash = pf.cash * Math.max(0, 1 - alloc);
+    const prods = (pf.prods || []).map(q => ({ i: M.products.findIndex(x => x.id === q.id), amt: pf.cash * q.pct })).filter(q => q.i >= 0 && q.amt > 0);
+    const alloc = prods.reduce((a, q) => a + q.amt, 0), stockCash = Math.max(0, pf.cash - alloc);
     const holdings = (pf.holdings || []).map(h => ({ c: M.codes.indexOf(h.code), amt: h.amt })).filter(h => h.c >= 0);
-    const p2 = { ...pol, excl: [...(pol.excl || []).map(c => M.codes.indexOf(c)).filter(c => c >= 0), ...holdings.map(h => h.c)], only: (pol.only || []).map(c => M.codes.indexOf(c)).filter(c => c >= 0) };
+    const p2 = { ...pol, excl: [...(pol.excl || []).map(c => M.codes.indexOf(c)).filter(c => c >= 0), ...holdings.map(h => h.c)], only: (pol.only || []).map(c => M.codes.indexOf(c)).filter(c => c >= 0),
+      inds: (pol.inds || []).map(n => M.industries.indexOf(n)).filter(i => i >= 0) };
     const res = backtest(mdl.score, p2, stockCash);
-    const plain = !alloc && !pf.hedge && !pf.put && !pf.call && !holdings.length;
-    const comp = plain ? { tot: res.eq, parts: null, notes: [], overlay: null } : compose(res.eq, { ...pf, holdings }, pf.cash);
+    const plain = !prods.length && !pf.hedge && !pf.put && !pf.call && !holdings.length;
+    const comp = plain ? { tot: res.eq, parts: null, notes: [] } : compose(res.eq, { ...pf, prods, holdings });
+    if (comp.parts) comp.parts.unshift({ label: '국내주식(AI 선정)', cat: '국내주식', start: stockCash, end: res.eq[M.nd - 1] });
     const eq = comp.tot, init = pf.cash + holdings.reduce((s, h) => s + h.amt, 0), { mk, un } = bench(init);
     const dev = segMetrics(eq, M.dev[0], M.dev[1], res.ledger), fin = segMetrics(eq, M.final[0], M.final[1], res.ledger);
     const B = (x, label) => ({ label, dev: segMetrics(x, M.dev[0], M.dev[1], []), final: segMetrics(x, M.final[0], M.final[1], []) });
     const pkey = JSON.stringify([pol, pf]);
-    const endParts = comp.parts ? Object.fromEntries(Object.entries(comp.parts).map(([k, v]) => [k, Math.round(v[M.nd - 1])])) : null;
     return { run_id: 'r_' + hash(modelKey(ms) + pkey), model_id: mdl.info.model_id, policy_id: 'p_' + hash(pkey), engine_version: VERSION, model_status: mdl.reused ? 'reused' : 'trained', source: 'browser',
       model: mdl.info, metrics: { development: dev, locked_final: fin },
-      benchmarks: { market: B(mk, '코스피 시가총액 가중(지수 대용, 비용·배당 미반영)'), universe: B(un, '대상 300종목 동일가중(비용 미반영)') },
+      benchmarks: { market: B(mk, '코스피 지수(배당 미반영)'), universe: B(un, '대상 300종목 동일가중(비용 미반영)') },
       trailing: { as_of: M.days[M.nd - 1], strategy: trailing(eq) }, rolling_6m: rolling(eq, 6), yearly: yearly(eq, mk, un, res.ledger),
       series: { dates: weeklyDates(), strategy: weekly(eq), market: weekly(mk), universe: weekly(un) },
       ledger_summary: { n_trades: res.n_trades, win_rate: res.win_rate, skipped: res.skipped, cost_and_slippage_krw: Math.round(res.fees), cost_assumption: res.cost_label, n_ledger_rows: res.ledger.length },
-      ledger_tail: res.ledger.slice(-14), open_positions_at_end: res.open, composition: endParts, overlay: comp.overlay, notes: comp.notes, assume: ASSUME,
+      ledger_tail: res.ledger.slice(-14), open_positions_at_end: res.open, composition: comp.parts ? comp.parts.map(x => ({ ...x, start: Math.round(x.start), end: Math.round(x.end) })) : null, notes: comp.notes,
       logs: [`[가상 체결] ${M.days[0]}~${M.days[M.nd - 1]} 거래 ${res.n_trades.toLocaleString()}건 · 미체결 ${res.skipped.untradable_buy}건 · 매수불가 ${res.skipped.unaffordable}건 · 비용 ${Math.round(res.fees).toLocaleString()}원`], elapsed_ms: Date.now() - t0 };
   }
-  root.Lab = { load, run, train, lgbAvailable, meta: () => M, arrays: () => A, ASSUME, COST, VERSION };
+  root.Lab = { load, run, train, lgbAvailable, meta: () => M, arrays: () => A, COST, VERSION };
   if (typeof module !== 'undefined') module.exports = root.Lab;
 })(typeof window !== 'undefined' ? window : globalThis);
